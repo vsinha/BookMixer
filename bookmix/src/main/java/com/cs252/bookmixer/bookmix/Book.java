@@ -12,6 +12,8 @@ public class Book {
     String _text;
     boolean is_downloaded;
 
+
+    // if we have the string that is the book text already
     public Book(int id, String title, String author, String year, int number, String text) {
         this._id = id;
         this._title = title;
@@ -19,7 +21,30 @@ public class Book {
         this._year = year;
         this._number = number;
         this._text = text;
+        is_downloaded = true;
+    }
+
+    // if we don't have the text
+    public Book(int id, String title, String author, String year, int number) {
+        this._id = id;
+        this._title = title;
+        this._author = author;
+        this._year = year;
+        this._number = number;
+        this._text = null;
         is_downloaded = false;
+    }
+
+    public String toString() {
+        return _title + " (" + _author + ", " + _year + ")";
+    }
+
+    public boolean is_downloaded() {
+        return is_downloaded;
+    }
+
+    public void set_downloaded(boolean is_downloaded) {
+        this.is_downloaded = is_downloaded;
     }
 
     public int get_id() {
