@@ -1,7 +1,9 @@
 package com.cs252.bookmixer.bookmix;
 
+import java.util.ArrayList;
 import java.util.Locale;
 
+import android.content.DialogInterface;
 import android.support.v7.app.ActionBarActivity;
 import android.support.v7.app.ActionBar;
 import android.support.v4.app.Fragment;
@@ -10,13 +12,18 @@ import android.support.v4.app.FragmentTransaction;
 import android.support.v4.app.FragmentPagerAdapter;
 import android.os.Bundle;
 import android.support.v4.view.ViewPager;
+import android.util.SparseBooleanArray;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View.OnClickListener;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ArrayAdapter;
+import android.widget.ListView;
 import android.widget.TextView;
+
 
 public class MainActivity extends ActionBarActivity implements ActionBar.TabListener {
 
@@ -34,6 +41,12 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
      * The {@link ViewPager} that will host the section contents.
      */
     ViewPager mViewPager;
+
+    ListView listView;
+    ArrayAdapter<String> adapter;
+    ArrayList<String> selectedItems;
+
+    TextView resultTextView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -75,7 +88,6 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
         }
     }
 
-
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         
@@ -98,6 +110,25 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
 
     @Override
     public void onTabSelected(ActionBar.Tab tab, FragmentTransaction fragmentTransaction) {
+        System.out.println("selected: " + tab.getText());
+
+        System.out.println(tab.getText());
+        System.out.println(tab.getText().equals(getString(R.string.title_section2)));
+        if (tab.getText().equals(getString(R.string.title_section2))) {
+
+            // update the textview to reflect what's selected
+            System.out.print("Updating result textview");
+
+            StringBuilder resultText = new StringBuilder();
+            resultText.append("Selected Items: \n\n");
+            for (String item : selectedItems) {
+                resultText.append(item);
+                resultText.append("\n");
+            }
+
+            resultTextView.setText(resultText.toString());
+        }
+
         // When the given tab is selected, switch to the corresponding page in
         // the ViewPager.
         mViewPager.setCurrentItem(tab.getPosition());
@@ -105,6 +136,21 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
 
     @Override
     public void onTabUnselected(ActionBar.Tab tab, FragmentTransaction fragmentTransaction) {
+        System.out.println("unselected: " + tab.getText());
+
+        // sloppily match text to check what tab we have
+        if (tab.getText().equals(getString(R.string.title_section1))) {
+            SparseBooleanArray checked = listView.getCheckedItemPositions();
+            selectedItems = new ArrayList<String>();
+
+            for (int i = 0; i < checked.size(); i++) {
+                int position = checked.keyAt(i);
+                if (checked.valueAt(i)) {
+                    System.out.println("Selected item: " + adapter.getItem(position));
+                    selectedItems.add(adapter.getItem(position));
+                }
+            }
+        }
     }
 
     @Override
@@ -125,13 +171,19 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
         public Fragment getItem(int position) {
             // getItem is called to instantiate the fragment for the given page.
             // Return a PlaceholderFragment (defined as a static inner class below).
-            return PlaceholderFragment.newInstance(position + 1);
+            if (position == 0) {
+                return new BookSelectFragment();
+            } else if (position == 1) {
+                return new MashupFragment();
+            } else {  // returns the default if needed for some reason (rather than just breaking)
+                return PlaceholderFragment.newInstance(position + 1);
+            }
         }
 
         @Override
         public int getCount() {
-            // Show 3 total pages.
-            return 3;
+            // number of total pages.
+            return 2;
         }
 
         @Override
@@ -139,13 +191,58 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
             Locale l = Locale.getDefault();
             switch (position) {
                 case 0:
-                    return getString(R.string.title_section1).toUpperCase(l);
+                    return getString(R.string.title_section1);
                 case 1:
-                    return getString(R.string.title_section2).toUpperCase(l);
-                case 2:
-                    return getString(R.string.title_section3).toUpperCase(l);
+                    return getString(R.string.title_section2);
             }
             return null;
+        }
+    }
+
+    // listview to select books
+    public class BookSelectFragment extends Fragment {
+
+        private void setListViewHandler(View view) {
+            listView = (ListView) view.findViewById(R.id.bookList);
+
+            String[] sports = getResources().getStringArray(R.array.sports_array);
+            adapter = new ArrayAdapter<String>(super.getActivity(),
+                    android.R.layout.simple_list_item_multiple_choice, sports);
+            listView.setChoiceMode(ListView.CHOICE_MODE_MULTIPLE);
+            listView.setAdapter(adapter);
+        }
+
+        @Override
+        public View onCreateView(LayoutInflater inflater, ViewGroup container,
+                                 Bundle savedInstanceState) {
+            System.out.println("Creating book select view");
+            View rootView = inflater.inflate(R.layout.fragment_bookselect, container, false);
+            setListViewHandler(rootView);
+            return rootView;
+        }
+    }
+
+    // interface for actually generating the mashups
+    public class MashupFragment extends Fragment implements OnClickListener {
+
+        public void onClick(View view) {
+            // mash em up!
+            System.out.println("Mashing up selected books");
+        }
+
+        private void setTextViewAdapter(View view) {
+            resultTextView = (TextView) view.findViewById(R.id.result_text);
+        }
+
+        @Override
+        public View onCreateView(LayoutInflater inflater, ViewGroup container,
+                                 Bundle savedInstanceState) {
+            System.out.println("Creating mashup view");
+            View rootView = inflater.inflate(R.layout.fragment_mashup, container, false);
+
+            setTextViewAdapter(rootView);
+
+            return rootView;
         }
     }
 
