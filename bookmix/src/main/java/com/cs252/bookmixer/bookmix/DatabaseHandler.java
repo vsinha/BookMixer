@@ -3,6 +3,7 @@ package com.cs252.bookmixer.bookmix;
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
+import android.database.sqlite.SQLiteConstraintException;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 
@@ -54,9 +55,20 @@ public class DatabaseHandler extends SQLiteOpenHelper {
         ContentValues values = new ContentValues();
         values.put(KEY_ID, book.get_id());
         values.put(KEY_TITLE, book.get_title());
+        values.put(KEY_AUTHOR, book.get_author());
+        values.put(KEY_YEAR, book.get_year());
+        values.put(KEY_NUMBER, book.get_number());
+        values.put(KEY_DOWNLOADED, book.is_downloaded());
+        if (book.is_downloaded()) {
+            values.put(KEY_TEXT, book.get_text());
+        }
 
         // Inserting Row
-        db.insert(TABLE_BOOKS, null, values);
+        try {
+            db.insert(TABLE_BOOKS, null, values);
+        } catch (SQLiteConstraintException e) {
+            e.printStackTrace();
+        }
         db.close(); // Closing database connection
     }
 
