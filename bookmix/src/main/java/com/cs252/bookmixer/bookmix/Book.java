@@ -4,20 +4,30 @@ package com.cs252.bookmixer.bookmix;
  * Created by viraj on 5/5/14.
  */
 public class Book {
+    int _id; // primary db key
     String _title;
     String _author;
-    int _year;
+    String _year;
     int _number;
     String _text;
     boolean is_downloaded;
 
-    public Book(String title, String author, int year, int number, String text) {
+    public Book(int id, String title, String author, String year, int number, String text) {
+        this._id = id;
         this._title = title;
         this._author = author;
         this._year = year;
         this._number = number;
         this._text = text;
         is_downloaded = false;
+    }
+
+    public int get_id() {
+        return _id;
+    }
+
+    public void set_id(int _id) {
+        this._id = _id;
     }
 
     public String get_title() {
@@ -36,11 +46,11 @@ public class Book {
         this._author = _author;
     }
 
-    public int get_year() {
+    public String get_year() {
         return _year;
     }
 
-    public void set_year(int _year) {
+    public void set_year(String _year) {
         this._year = _year;
     }
 
