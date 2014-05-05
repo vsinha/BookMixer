@@ -19,6 +19,7 @@ import android.view.View.OnClickListener;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.ListView;
 import android.widget.TextView;
 
@@ -45,11 +46,17 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
     ArrayList<String> selectedItems;
 
     TextView resultTextView;
+    Button generateButton;
+
+    DatabaseHandler db;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        // init the db
+        db = new DatabaseHandler(this);
 
         // Set up the action bar.
         final ActionBar actionBar = getSupportActionBar();
@@ -221,11 +228,28 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
     }
 
     // interface for actually generating the mashups
-    public class MashupFragment extends Fragment implements OnClickListener {
+    public class MashupFragment extends Fragment {
 
-        public void onClick(View view) {
-            // mash em up!
-            System.out.println("Mashing up selected books");
+        // handler for the generate button
+        private void setGenerateButtonHandler(View view) {
+
+            generateButton = (Button) view.findViewById(R.id.generate_button);
+            generateButton.setOnClickListener(new OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    System.out.println("Mashing up selected books");
+
+                    // all this is testing db functionality
+                    // pretend to create a new db entry
+                    System.out.println("adding book");
+                    db.addBook(new Book(0, "testbook", "testauthor", "2001", 1));
+
+                    // read db entry
+                    System.out.println("getting book");
+                    Book book = db.getBook(0);
+                    System.out.println(book);
+                }
+            });
         }
 
         private void setTextViewAdapter(View view) {
@@ -239,6 +263,7 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
             View rootView = inflater.inflate(R.layout.fragment_mashup, container, false);
 
             setTextViewAdapter(rootView);
+            setGenerateButtonHandler(rootView);
 
             return rootView;
         }
