@@ -264,29 +264,6 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
             // TODO mash them up after all books are done downloading
         }
 
-        // handler for the generate button
-        // we download text from gutenberg here
-        private void setGenerateButtonHandler(View view) {
-            generateButton = (Button) view.findViewById(R.id.generate_button);
-            generateButton.setOnClickListener(new OnClickListener() {
-                @Override
-                public void onClick(View view) {
-                    Log.d(TAG, "Mashing up selected books");
-
-                    // first, download books if necessary
-                    for (Book book : selectedItems) {
-                        Log.d(TAG, "Selected: " + book.toString() +
-                                " isDownloaded? " + book.is_downloaded());
-
-                        if (!book.is_downloaded()) { // then download it!
-                            Log.d(TAG, "Must DL: "+ book.toString());
-                            new DownloadTextTask(getActivity()).execute(book);  // launch async task
-                        }
-                    }
-                }
-            });
-        }
-
         private class DownloadTextTask extends AsyncTask<Book, Integer, Book> {
             static final String TAG = "DownloadTextTask: ";
 
@@ -312,13 +289,6 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
                     populateDesktopHttpHeaders(connection);
                     connection.connect();
 
-                    // expect HTTP 200 OK, so we don't mistakenly save error report
-                    // instead of the file
-                    if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
-                        Log.d(TAG, "Server returned HTTP " + connection.getResponseCode()
-                                + " " + connection.getResponseMessage());
-                    }
-
                     // to display download percentage
                     // might be -1: server did not report the length
                     //List values = connection.getHeaderFields().get("content-Length");
@@ -329,16 +299,29 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
                     }
                     Log.d(TAG, "fileSize: " + fileSize);
 
+                    // expect HTTP 200 OK, so we don't mistakenly save error report
+                    // instead of the file
+                    if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
+                        Log.d(TAG, "Server returned HTTP " + connection.getResponseCode()
+                                + " " + connection.getResponseMessage());
+                    }
+
                     // actually download the file
                     input = connection.getInputStream();
-                    BufferedReader br = null;
+                    BufferedReader br = new BufferedReader(new InputStreamReader(input));
                     StringBuilder sb = new StringBuilder();
+
                     String line;
                     long total = 0;
                     int count;
-                    br = new BufferedReader(new InputStreamReader(input));
                     System.out.print("writing to buffered reader");
-                    while ((line = br.readLine()) != null) {
+
+                    while (true) {
+                        line = br.readLine();
+                        if (line == null) {
+                            break;
+                        }
+
                         // publish progress...
                         total += line.length();
                         if (fileSize > 0) {// only if total length is known
@@ -346,7 +329,7 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
                         }
                         sb.append(line);
                     }
-                    // done with buffered reader
+                    br.close(); // done with buffered reader
 
                     // put the text in the book
                     Log.d(TAG, "writing to output string");
@@ -414,11 +397,59 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
                     Log.v("File downloaded", "null");
                     outputTextView.setText(result.toString());
                     toast.makeText(context,"File downloaded", Toast.LENGTH_SHORT).show();
+
+                    // spawn another async task to update the view
+                    new UpdateTextViewTask(context).execute(result.get_text());
                 }
-                //outputTextView.setText("Done downloading " + result.get_title() + " ");
+                //
             }
+        }
 
+        private class UpdateTextViewTask extends AsyncTask<String, Void, Void> {
+            Context context;
+            UpdateTextViewTask(Context context) {
+                this.context = context;
+            }
+            @Override
+            protected Void doInBackground(String ... strings) {
+                outputTextView.setText(strings[0]);
+                return null;
+            }
+        }
 
+        // handler for the generate button
+        // we download text from gutenberg here
+        private void setGenerateButtonHandler(View view) {
+            generateButton = (Button) view.findViewById(R.id.generate_button);
+            generateButton.setOnClickListener(new OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    Log.d(TAG, "Mashing up selected books");
+
+                    // first, download books if necessary
+                    for (Book book : selectedItems) {
+                        Log.d(TAG, "Selected: " + book.toString() +
+                                " isDownloaded? " + book.is_downloaded());
+
+                        if (!book.is_downloaded()) { // then download it!
+                            Log.d(TAG, "Must DL: " + book.toString());
+
+                            Context context = getApplicationContext();
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
+                                // multithread if possible
+                                new DownloadTextTask(context)
+                                        .executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, book);
+                            } else {
+                                try {
+                                    new DownloadTextTask(context).execute(book).get();
+                                } catch (Exception e) {
+                                    e.printStackTrace();
+                                }
+                            }
+                        }
+                    }
+                }
+            });
         }
 
         private void setTextViewAdapter(View view) {
