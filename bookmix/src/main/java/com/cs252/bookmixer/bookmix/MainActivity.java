@@ -398,22 +398,14 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
                     outputTextView.setText(result.toString());
                     toast.makeText(context,"File downloaded", Toast.LENGTH_SHORT).show();
 
-                    // spawn another async task to update the view
-                    new UpdateTextViewTask(context).execute(result.get_text());
+                    // update the view in another thread
+                    final String text = result.get_text();
+                    runOnUiThread(new Runnable() {
+                        public void run() {
+                            outputTextView.setText(text);
+                        }
+                    });
                 }
-                //
-            }
-        }
-
-        private class UpdateTextViewTask extends AsyncTask<String, Void, Void> {
-            Context context;
-            UpdateTextViewTask(Context context) {
-                this.context = context;
-            }
-            @Override
-            protected Void doInBackground(String ... strings) {
-                outputTextView.setText(strings[0]);
-                return null;
             }
         }
 
@@ -436,7 +428,7 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
 
                             Context context = getApplicationContext();
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
-                                // multithread if possible
+                                // multi-thread if possible
                                 new DownloadTextTask(context)
                                         .executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, book);
                             } else {
