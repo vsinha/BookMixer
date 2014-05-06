@@ -1,8 +1,10 @@
 package com.cs252.bookmixer.bookmix;
 
+import java.io.BufferedReader;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -10,6 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
+import android.app.ProgressDialog;
 import android.content.Context;
 import android.os.AsyncTask;
 import android.os.PowerManager;
@@ -33,6 +36,7 @@ import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.ListView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 public class MainActivity extends ActionBarActivity implements ActionBar.TabListener {
 
@@ -59,6 +63,7 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
 
     TextView resultTextView;
     Button generateButton;
+    ProgressDialog mProgressDialog;
 
     DatabaseAdapter db;
 
@@ -87,6 +92,14 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
             Log.e("MainActivity", "no books table");
         }
         */
+
+        // instantiate progressBar
+        mProgressDialog = new ProgressDialog(this);
+        mProgressDialog.setMessage("A message");
+        mProgressDialog.setIndeterminate(true);
+        mProgressDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
+        mProgressDialog.setCancelable(true);
+
 
         // Set up the action bar.
         final ActionBar actionBar = getSupportActionBar();
@@ -268,6 +281,7 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
     protected class DownloadTask extends AsyncTask<Book, Integer, Book> {
         private Context context;
         private PowerManager.WakeLock mWakeLock;
+        String output;
 
         public DownloadTask(Context context) {
             this.context = context;
@@ -275,10 +289,11 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
 
         @Override
         protected Book doInBackground(Book ... books) {
+            output = null;
             InputStream input = null;
-            OutputStream output = null;
             HttpURLConnection connection = null;
             try {
+                Log.d(TAG, "attempting dl from url: " + books[0].getURL());
                 URL url = new URL(books[0].getURL());
                 connection = (HttpURLConnection) url.openConnection();
                 connection.connect();
@@ -292,34 +307,47 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
 
                 // this will be useful to display download percentage
                 // might be -1: server did not report the length
-                int fileLength = connection.getContentLength();
+                List values = connection.getHeaderFields().get("content-Length");
+                int fileLength = 0;
+                if (values != null && !values.isEmpty()) {
+                    String sLength = (String) values.get(0);
+                    if (sLength != null) {
+                        fileLength = Integer.parseInt(sLength);
+                    }
+                }
+
+                Log.d(TAG, "file length: " + fileLength);
 
                 // download the file
                 input = connection.getInputStream();
-                output = new FileOutputStream("/sdcard/file_name.extension");
 
-                byte data[] = new byte[4096];
+                BufferedReader br = null;
+                StringBuilder sb = new StringBuilder();
+
+                String line;
                 long total = 0;
                 int count;
-                while ((count = input.read(data)) != -1) {
-                    // allow canceling with back button
-                    if (isCancelled()) {
-                        input.close();
-                        return null;
-                    }
-                    total += count;
+                br = new BufferedReader(new InputStreamReader(input));
+                while ((line = br.readLine()) != null) {
                     // publishing the progress....
+                    total += 1;
                     if (fileLength > 0) // only if total length is known
                         publishProgress((int) (total * 100 / fileLength));
-                    output.write(data, 0, count);
+                    Log.d(TAG, line);
+
+                    sb.append(line);
                 }
+
+                Log.d(TAG, "writing to output string");
+                output = sb.toString();
+
             } catch (Exception e) {
                 e.printStackTrace();
                 return null;
             } finally {
                 try {
                     if (output != null)
-                        output.close();
+                        //output.close();
                     if (input != null)
                         input.close();
                 } catch (IOException i) {
@@ -330,7 +358,48 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
                     connection.disconnect();
                 }
             }
-            return null;
+            Log.d(TAG, "returning from downloader");
+
+            books[0]._text = output.toString();
+            return books[0];
+        }
+
+        @Override
+        protected void onPreExecute() {
+            super.onPreExecute();
+            // take CPU lock to prevent CPU from going off if the user
+            // presses the power button during download
+            PowerManager pm = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
+            mWakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,
+                    getClass().getName());
+            mWakeLock.acquire();
+            mProgressDialog.show();
+        }
+
+        @Override
+        protected void onProgressUpdate(Integer... progress) {
+            super.onProgressUpdate(progress);
+            // if we get here, length is known, now set indeterminate to false
+            mProgressDialog.setIndeterminate(false);
+            mProgressDialog.setMax(100);
+            mProgressDialog.setProgress(progress[0]);
+        }
+
+        protected void onPostExecute(Book result) {
+            Log.d(TAG, "doing postExecute");
+            mWakeLock.release();
+            mProgressDialog.dismiss();
+            Toast toast = new Toast(getApplicationContext());
+            /*
+            if (result != null) {
+                toast.makeText(context,"Download error: "+result, Toast.LENGTH_LONG).show();
+            } else {
+                resultTextView.setText(output.toString());
+                toast.makeText(context,"File downloaded", Toast.LENGTH_SHORT).show();
+            }
+            */
+
+            resultTextView.setText(result._text);
         }
     }
 
@@ -352,6 +421,10 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
                         if (!book.is_downloaded()) {
                             // then download it!
                             Log.d(TAG, "Must DL: "+ book.toString());
+                            final DownloadTask dt = new DownloadTask(getApplicationContext());
+                            dt.execute(book);
+
+                            Log.d(TAG, "post download");
                         }
                     }
                 }
@@ -408,6 +481,34 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
             textView.setText(Integer.toString(getArguments().getInt(ARG_SECTION_NUMBER)));
             return rootView;
         }
+    }
+
+    // convert InputStream to String
+    private static String getStringFromInputStream(InputStream is) {
+
+        BufferedReader br = null;
+        StringBuilder sb = new StringBuilder();
+
+        String line;
+        try {
+            br = new BufferedReader(new InputStreamReader(is));
+            while ((line = br.readLine()) != null) {
+                Log.d(TAG, line);
+                sb.append(line);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            if (br != null) {
+                try {
+                    Log.d(TAG, "closing buffered reader");
+                    br.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+        return sb.toString();
     }
 
 }
