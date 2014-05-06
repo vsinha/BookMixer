@@ -93,8 +93,6 @@ public class DatabaseAdapter {
         try {
             dbHandler.openDataBase();
             dbHandler.close();
-
-            //System.out.println("opening readable db");
             mDb = dbHandler.getReadableDatabase();
         } catch (SQLException mSQLException) {
             Log.e(TAG, "open >>"+ mSQLException.toString());
@@ -104,26 +102,11 @@ public class DatabaseAdapter {
     }
 
     public void close() {
-        System.out.println("closing db");
+        Log.d(TAG, "closing db");
         dbHandler.close();
     }
 
     public void resetDB() {
         dbHandler.resetDB();
-    }
-
-    public Cursor getTestData() {
-        try {
-            String sql ="SELECT * FROM " + TABLE_BOOKS;
-
-            Cursor mCur = mDb.rawQuery(sql, null);
-            if (mCur!=null) {
-                mCur.moveToNext();
-            }
-            return mCur;
-        } catch (SQLException mSQLException) {
-            Log.e(TAG, "getTestData >>"+ mSQLException.toString());
-            throw mSQLException;
-        }
     }
 }

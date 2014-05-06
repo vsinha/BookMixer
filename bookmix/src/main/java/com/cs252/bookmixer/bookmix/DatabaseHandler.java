@@ -43,11 +43,11 @@ public class DatabaseHandler extends SQLiteOpenHelper {
         super(context, DB_NAME, null, DATABASE_VERSION);
 
         if(android.os.Build.VERSION.SDK_INT >= 17){
-            System.out.println("using dir: " + context.getApplicationInfo().dataDir);
+            Log.d(TAG, "using dir: " + context.getApplicationInfo().dataDir);
             DB_PATH = context.getApplicationInfo().dataDir + "/databases/";
         } else {
             DB_PATH = "/data/data/" + context.getPackageName().toString() + "/databases/";
-            System.out.println("using dir: " + DB_PATH);
+            Log.d(TAG, "using dir: " + DB_PATH);
         }
         this.mContext = context;
     }
@@ -88,16 +88,10 @@ public class DatabaseHandler extends SQLiteOpenHelper {
 
     //Copy the database from assets
     private void copyDataBase() throws IOException {
-        System.out.println("attempting to copy");
-
-        AssetManager assets = mContext.getAssets();
-        String[] list = assets.list("");
-        for (String s : list) {
-            System.out.println("asset: " + s);
-        }
+        Log.d(TAG, "attempting to copy");
 
         InputStream mInput = mContext.getAssets().open(DB_NAME);
-        System.out.println("opened db successfully");
+        Log.d(TAG, "opened db successfully");
         String outFileName = DB_PATH + DB_NAME;
         OutputStream mOutput = new FileOutputStream(outFileName);
         byte[] mBuffer = new byte[1024];
@@ -145,7 +139,7 @@ public class DatabaseHandler extends SQLiteOpenHelper {
         } catch (SQLiteConstraintException e) {
             e.printStackTrace();
         }
-        System.out.println("closing writable db after adding book");
+        Log.d(TAG, "closing writable db after adding book");
         db.close(); // Closing database connection
     }
 
@@ -197,9 +191,7 @@ public class DatabaseHandler extends SQLiteOpenHelper {
     }
 
     @Override
-    public synchronized void close()
-    {
-        //System.out.println("closing db in databasehandler");
+    public synchronized void close()     {
         if(mDataBase != null)
             mDataBase.close();
         super.close();

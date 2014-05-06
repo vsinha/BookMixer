@@ -11,8 +11,6 @@ import java.util.List;
 import java.util.Locale;
 
 import android.content.Context;
-import android.database.sqlite.SQLiteConstraintException;
-import android.database.sqlite.SQLiteException;
 import android.os.AsyncTask;
 import android.os.PowerManager;
 import android.support.v7.app.ActionBarActivity;
@@ -145,14 +143,12 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
 
     @Override
     public void onTabSelected(ActionBar.Tab tab, FragmentTransaction fragmentTransaction) {
-        System.out.println("selected: " + tab.getText());
+        Log.d(TAG, "selected: " + tab.getText());
 
-        System.out.println(tab.getText());
-        System.out.println(tab.getText().equals(getString(R.string.title_section2)));
         if (tab.getText().equals(getString(R.string.title_section2))) {
 
             // update the textview to reflect what's selected
-            System.out.print("Updating result textview");
+            Log.d(TAG, "Updating result textview");
 
             StringBuilder resultText = new StringBuilder();
             resultText.append("Selected Items: \n\n");
@@ -171,7 +167,7 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
 
     @Override
     public void onTabUnselected(ActionBar.Tab tab, FragmentTransaction fragmentTransaction) {
-        System.out.println("unselected: " + tab.getText());
+        Log.d(TAG, "unselected: " + tab.getText());
 
         // sloppily match text to check what tab we have
         if (tab.getText().equals(getString(R.string.title_section1))) {
@@ -181,7 +177,7 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
             for (int i = 0; i < checked.size(); i++) {
                 int position = checked.keyAt(i);
                 if (checked.valueAt(i)) {
-                    System.out.println("Selected item: " + adapter.getItem(position));
+                    Log.d(TAG, "Selected item: " + adapter.getItem(position));
                     selectedItems.add(adapter.getItem(position));
                 }
             }
@@ -258,7 +254,7 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
         @Override
         public View onCreateView(LayoutInflater inflater, ViewGroup container,
                                  Bundle savedInstanceState) {
-            System.out.println("Creating book select view");
+            Log.d(TAG, "Creating book select view");
             View rootView = inflater.inflate(R.layout.fragment_bookselect, container, false);
             setListViewHandler(rootView);
             return rootView;
@@ -286,7 +282,7 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
                 // expect HTTP 200 OK, so we don't mistakenly save error report
                 // instead of the file
                 if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
-                    System.out.println("Server returned HTTP " + connection.getResponseCode()
+                    Log.d(TAG, "Server returned HTTP " + connection.getResponseCode()
                             + " " + connection.getResponseMessage());
                 }
 
@@ -342,7 +338,7 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
             generateButton.setOnClickListener(new OnClickListener() {
                 @Override
                 public void onClick(View view) {
-                    System.out.println("Mashing up selected books");
+                    Log.d(TAG, "Mashing up selected books");
                     // download books if necessary
                 }
             });
@@ -355,7 +351,7 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
         @Override
         public View onCreateView(LayoutInflater inflater, ViewGroup container,
                                  Bundle savedInstanceState) {
-            System.out.println("Creating mashup view");
+            Log.d(TAG, "Creating mashup view");
             View rootView = inflater.inflate(R.layout.fragment_mashup, container, false);
 
             setTextViewAdapter(rootView);
