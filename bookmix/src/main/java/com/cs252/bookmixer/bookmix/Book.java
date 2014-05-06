@@ -10,13 +10,15 @@ public class Book {
     private String _URL;
     private boolean is_downloaded;
     private String _text;
+    private int filesize;
 
     // if we have the string that is the book text already
-    public Book(int id, String title, String author, String URL, String text) {
+    public Book(int id, String title, String author, String URL, int filesize, String text) {
         this._id = id;
         this._title = title;
         this._author = author;
         this._URL = URL;
+        this.filesize = filesize;
 
         if (text != null) {
             this._text = text;
@@ -41,12 +43,14 @@ public class Book {
         return _title + " (" + _author + ")";
     }
 
+    public int getFilesize() { return filesize; }
+
     public String getURL() {
         return _URL;
     }
 
     public boolean is_downloaded() {
-        return !_text.equals("emptyText");
+        return !_text.equals("empty_text");
     }
 
     public void set_downloaded(boolean is_downloaded) {

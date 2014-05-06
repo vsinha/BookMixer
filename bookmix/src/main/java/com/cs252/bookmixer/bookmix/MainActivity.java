@@ -6,10 +6,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.lang.reflect.Array;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.ExecutionException;
@@ -75,7 +77,7 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
 
         // init the db
         db = new DatabaseAdapter(this);
-        //db.resetDB();
+        //db.resetDB();  // uncomment for db debugging
         db.createDatabase();  // copies if necessary, does nothing otherwise
         db.open();
 
@@ -148,11 +150,13 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
         Log.d(TAG, "selected: " + tab.getText());
 
         if (tab.getText().equals(getString(R.string.title_section2))) {
+
+            selectedItems = bookAdapter.getSelectedItems();
+
             // update the textview to reflect what's selected
             StringBuilder resultText = new StringBuilder();
             resultText.append("Selected Items: \n\n");
             for (Book b : selectedItems) {
-                Log.d(TAG, "appending" + b.toString());
                 resultText.append(b.toString());
                 resultText.append("\n");
             }
@@ -239,18 +243,23 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
             listView.setChoiceMode(ListView.CHOICE_MODE_MULTIPLE); // able to select multiples
             listView.setAdapter(bookAdapter);
 
+            /*
             listView.setOnItemClickListener(new OnItemClickListener() {
+
                 public void onItemClick(AdapterView<?> parent, View view,int position, long id) {
-                    if (listView.isSelected()) {
+                    SparseBooleanArray checked = listView.getCheckedItemPositions();
+
+
+                    if (listView.isItemChecked(position)) {
                         Log.d(TAG, "Unselected: " + bookAdapter.getItem(position));
                         view.setSelected(false);
                         selectedItems.remove(bookAdapter.getItem(position));
-                        //listView.setItemChecked(position, false);
+                        listView.setItemChecked(position, false);
                     } else {
                         Log.d(TAG, "Selected: " + bookAdapter.getItem(position));
                         view.setSelected(true);
                         selectedItems.add(bookAdapter.getItem(position));
-                        //listView.setItemChecked(position, true);
+                        listView.setItemChecked(position, true);
                     }
                     bookAdapter.notifyDataSetChanged();
 
@@ -258,14 +267,15 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
                     // bookAdapter.rowSelected(view, position);
                 }
             });
+            */
         }
     }
 
     private class BookAdapter extends ArrayAdapter<Book> {
         private List<Book> books;
+        public ArrayList<Boolean> checkedItems;
         Context context;
-        LayoutInflater inflater;
-        SparseBooleanArray checked;
+
 
         public BookAdapter(Context context, int textViewResourceId, List<Book> books) {
             super(context, textViewResourceId, books);
@@ -274,8 +284,18 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
             System.out.println(books);
             this.context = context;
 
-            inflater = (LayoutInflater) getContext()
-                    .getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+            //initialize to all zeros
+            checkedItems = new ArrayList<Boolean>(Collections.nCopies(books.size(), false));
+        }
+
+        public ArrayList<Book> getSelectedItems() {
+            ArrayList<Book> selectedItems = new ArrayList<Book>();
+            for (int i = 0; i < books.size(); i++) {
+                if (checkedItems.get(i)) { // is selected
+                    selectedItems.add(books.get(i));
+                }
+            }
+            return selectedItems;
         }
 
         /*
@@ -296,50 +316,44 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
         }
         */
 
-        public void setCheckedList() {
-            checked = listView.getCheckedItemPositions();
-            notifyDataSetChanged();
-        }
-
         @Override
         public View getView(final int position, View convertView, ViewGroup parent) {
             ViewHolder holder = null;
 
             if (convertView == null) { // create a new one
-                convertView = inflater.inflate(R.layout.listcell, parent, false);
+                LayoutInflater inflater = (LayoutInflater) getContext()
+                        .getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+                convertView = inflater.inflate(R.layout.listcell, null);
 
                 holder = new ViewHolder();
                 holder.checkBox = (CheckBox) convertView.findViewById( R.id.checkbox );
                 holder.title = (TextView) convertView.findViewById(R.id.title_text);
                 holder.author = (TextView) convertView.findViewById(R.id.author_text);
-                convertView.setTag(holder);
 
+                holder.checkBox.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+                    @Override
+                    public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
+                        int position = (Integer) compoundButton.getTag();
+                        checkedItems.set(position, compoundButton.isChecked());
+                    }
+                });
+
+                convertView.setTag(holder);
+                convertView.setTag(R.id.title_text, holder.title);
+                convertView.setTag(R.id.author_text, holder.author);
+                convertView.setTag(R.id.checkbox, holder.checkBox);
             } else { // recycle an old one
                 holder = (ViewHolder) convertView.getTag();
             }
+
+            holder.checkBox.setTag(position);
 
             Book b = books.get(position);
 
             holder.title.setText(b.get_title());
             holder.author.setText(b.get_author());
+            holder.checkBox.setChecked( checkedItems.get( position ) );
 
-            setCheckedList();
-            holder.checkBox.setChecked( checked.get( position ) );
-
-            /*
-            final View view = convertView;
-            holder.checkBox.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-                @Override
-                public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
-                    Log.d(TAG, "checkbox state: " + b);
-                    if (b) {
-                        view.setBackgroundColor(getResources().getColor(R.color.lightgreen));
-                    } else {
-                        view.setBackgroundColor(getResources().getColor(R.color.transparent));
-                    }
-                }
-            });
-            */
             return convertView;
         }
 
@@ -404,7 +418,7 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
 
                 String line;
                 long total = 0;
-                long fileSize = 0;
+                long fileSize = books[0].getFilesize();
                 int count;
                 System.out.print("writing to buffered reader");
 
@@ -535,16 +549,16 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
 
                             Context context = getApplicationContext();
                             // multi-thread if possible
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
-                                new DownloadTextTask(context)
-                                        .executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, book);
-                            } else {
-                                //try {
-                                //    new DownloadTextTask(context).execute(book).get();
-                                //} catch (Exception e) {
-                                //    e.printStackTrace();
-                                //}
-                            }
+                            //if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
+                            //    new DownloadTextTask(context)
+                            //            .executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, book);
+                            //} else {
+                                try {
+                                    new DownloadTextTask(context).execute(book).get();
+                                } catch (Exception e) {
+                                    e.printStackTrace();
+                                }
+                            //}
                         }
                     }
                 }
