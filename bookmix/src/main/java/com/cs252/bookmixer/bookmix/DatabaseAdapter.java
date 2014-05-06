@@ -1,8 +1,10 @@
 package com.cs252.bookmixer.bookmix;
 
+import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.SQLException;
+import android.database.sqlite.SQLiteConstraintException;
 import android.database.sqlite.SQLiteDatabase;
 import android.util.Log;
 
@@ -68,13 +70,52 @@ public class DatabaseAdapter {
                 bookList.add(book);
             } while (cursor.moveToNext());
         }
+        db.close();
 
         // return contact list
         return bookList;
     }
 
     public void addBook(Book book) {
-        dbHandler.addBook(book);
+        Log.v(TAG, "adding books");
+        SQLiteDatabase db = dbHandler.getWritableDatabase();
+
+        ContentValues values = new ContentValues();
+        values.put(KEY_ID, book.get_id());
+        values.put(KEY_TITLE, book.get_title());
+        values.put(KEY_AUTHOR, book.get_author());
+        values.put(KEY_DOWNLOADED, book.is_downloaded());
+        if (book.is_downloaded()) {
+            values.put(KEY_TEXT, book.get_text());
+        }
+
+        // Inserting Row
+        try {
+            db.insert(TABLE_BOOKS, null, values);
+        } catch (SQLiteConstraintException e) {
+            e.printStackTrace();
+        }
+        Log.d(TAG, "closing writable db after adding book");
+        db.close(); // close database connection
+    }
+
+    // update book in db with text post-download
+    public void updateBook(Book book) {
+        SQLiteDatabase db = dbHandler.getWritableDatabase();
+
+        ContentValues values = new ContentValues();
+        values.put(KEY_ID, book.get_id());
+        values.put(KEY_TITLE, book.get_title());
+        values.put(KEY_AUTHOR, book.get_author());
+        values.put(KEY_DOWNLOADED, book.is_downloaded());
+        if (book.is_downloaded()) {
+            values.put(KEY_TEXT, book.get_text());
+        }
+
+        db.update(TABLE_BOOKS, values, "_id " + "=" + book.get_id(), null);
+
+        Log.d(TAG, "finished updating book: " + book.get_title());
+        db.close();
     }
 
     public DatabaseAdapter createDatabase() throws SQLException
