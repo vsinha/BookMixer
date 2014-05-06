@@ -36,7 +36,6 @@ import android.widget.Button;
 import android.widget.ListView;
 import android.widget.TextView;
 
-
 public class MainActivity extends ActionBarActivity implements ActionBar.TabListener {
 
     /**
@@ -63,6 +62,8 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
 
     DatabaseAdapter db;
 
+    private static final String TAG = "MainActivity";
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -70,10 +71,11 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
 
         // init the db
         db = new DatabaseAdapter(this);
-        db.resetDB();
-        //db.createDatabase();
+        //db.resetDB();
+        db.createDatabase();
         db.open();
 
+        /*
         try {
             System.out.println("adding test book");
             db.addBook(new Book(0, "Metamorphosis", "Franz Kafka", "http://www.gutenberg.org/cache/epub/5200/pg5200.txt"));
@@ -84,6 +86,7 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
         } catch (SQLiteException e) {
             Log.e("MainActivity", "no books table");
         }
+        */
 
         // Set up the action bar.
         final ActionBar actionBar = getSupportActionBar();
@@ -340,7 +343,6 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
                 @Override
                 public void onClick(View view) {
                     System.out.println("Mashing up selected books");
-
                     // download books if necessary
                 }
             });

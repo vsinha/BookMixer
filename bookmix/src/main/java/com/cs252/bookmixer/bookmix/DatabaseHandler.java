@@ -25,14 +25,14 @@ public class DatabaseHandler extends SQLiteOpenHelper {
     // All Static variables
     private static final int DATABASE_VERSION = 1;
     private static String TAG = "DataBaseHelper";
-    private static final String DB_NAME = "booksManager";
+    private static final String DB_NAME = "booksManager.db";
     private static final String TABLE_BOOKS = "Books";
     private static String DB_PATH = "";
     private final Context mContext;
     private SQLiteDatabase mDataBase;
 
     // Books Table Columns names
-    private static final String KEY_ID = "KEY_ID"; // primary key
+    private static final String KEY_ID = "_id"; // primary key
     private static final String KEY_TITLE = "KEY_TITLE";
     private static final String KEY_AUTHOR = "KEY_AUTHOR";
     private static final String KEY_URL = "KEY_URL";
@@ -41,7 +41,6 @@ public class DatabaseHandler extends SQLiteOpenHelper {
 
     public DatabaseHandler(Context context) {
         super(context, DB_NAME, null, DATABASE_VERSION);
-
 
         if(android.os.Build.VERSION.SDK_INT >= 17){
             System.out.println("using dir: " + context.getApplicationInfo().dataDir);
@@ -73,11 +72,12 @@ public class DatabaseHandler extends SQLiteOpenHelper {
     public void createDataBase() throws IOException {
         //If database not exists copy it from the assets
         boolean mDataBaseExist = checkDataBase();
-        if(mDataBaseExist) {
+        if(!mDataBaseExist) {
+            Log.e(TAG, "attempting to copy databse");
             this.getReadableDatabase();
             this.close();
             try {
-                //Copy the database from assests
+                //Copy the database from assets
                 copyDataBase();
                 Log.e(TAG, "createDatabase database created");
             } catch (IOException mIOException) {
@@ -111,10 +111,9 @@ public class DatabaseHandler extends SQLiteOpenHelper {
     }
 
     //Check that the database exists here: /data/data/your package/databases/Da Name
-    private boolean checkDataBase()
-    {
+    private boolean checkDataBase() {
         File dbFile = new File(DB_PATH + DB_NAME);
-        Log.v("dbFile", dbFile + "   "+ dbFile.exists());
+        Log.v("dbFile", dbFile + "   "+ "Does db exist? " + dbFile.exists());
         return dbFile.exists();
     }
 
@@ -128,7 +127,7 @@ public class DatabaseHandler extends SQLiteOpenHelper {
     }
 
     public void addBook(Book book) {
-        System.out.println("adding books");
+        Log.v(TAG, "adding books");
         SQLiteDatabase db = this.getWritableDatabase();
 
         ContentValues values = new ContentValues();
@@ -200,7 +199,7 @@ public class DatabaseHandler extends SQLiteOpenHelper {
     @Override
     public synchronized void close()
     {
-        System.out.println("closing db in databasehandler");
+        //System.out.println("closing db in databasehandler");
         if(mDataBase != null)
             mDataBase.close();
         super.close();
@@ -219,16 +218,22 @@ public class DatabaseHandler extends SQLiteOpenHelper {
     }
 
     public void resetDB() {
-        Log.d(TAG, "resetting the DB");
+        File dbFile = new File(DB_PATH + DB_NAME);
+        Log.v("dbFile", dbFile + "   "+ "Does db exist? " + dbFile.exists());
+        boolean deleted = dbFile.delete();
+
+        Log.d(TAG, "resetting the DB (was previously deleted? " + deleted);
 
         SQLiteDatabase db = this.getWritableDatabase();
         db.execSQL("DROP TABLE IF EXISTS " + TABLE_BOOKS);
 
+        /*
         // Create tables again
         try {
             createDataBase();
         } catch (IOException e) {
             e.printStackTrace();
         }
+        */
     }
 }

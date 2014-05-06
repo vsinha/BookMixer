@@ -16,7 +16,7 @@ import java.util.List;
 public class DatabaseAdapter {
 
     // Books Table Columns names
-    private static final String KEY_ID = "KEY_ID"; // primary key
+    private static final String KEY_ID = "_id"; // primary key
     private static final String KEY_TITLE = "KEY_TITLE";
     private static final String KEY_AUTHOR = "KEY_AUTHOR";
     private static final String KEY_URL = "KEY_URL";
@@ -24,7 +24,7 @@ public class DatabaseAdapter {
     private static final String KEY_TEXT = "KEY_TEXT"; // the book file itself
 
     protected static final String TAG = "DataAdapter";
-    private static final String TABLE_BOOKS = "books";
+    private static final String TABLE_BOOKS = "Books";
 
     private final Context mContext;
     private SQLiteDatabase mDb;
@@ -94,7 +94,7 @@ public class DatabaseAdapter {
             dbHandler.openDataBase();
             dbHandler.close();
 
-            System.out.println("opening readable db");
+            //System.out.println("opening readable db");
             mDb = dbHandler.getReadableDatabase();
         } catch (SQLException mSQLException) {
             Log.e(TAG, "open >>"+ mSQLException.toString());
