@@ -348,6 +348,7 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
 
                     for (Book book : selectedItems) {
                         Log.d(TAG, "Selected: "+ book.toString() + " isDownloaded? " + book.is_downloaded());
+                        Log.d(TAG, "first text: " + book.get_text().toString().split(" "));
                         if (!book.is_downloaded()) {
                             // then download it!
                             Log.d(TAG, "Must DL: "+ book.toString());
