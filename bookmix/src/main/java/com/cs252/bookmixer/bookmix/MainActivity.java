@@ -52,8 +52,10 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
     ViewPager mViewPager;
 
     ListView listView;
-    ArrayAdapter<String> adapter;
-    ArrayList<String> selectedItems;
+    ArrayAdapter<Book> bookAdapter;
+    ArrayAdapter<String> stringAdapter; // strings for the listView
+    ArrayList<Book> selectedItems;
+    //ArrayList<String> selectedItems;
 
     TextView resultTextView;
     Button generateButton;
@@ -152,8 +154,8 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
 
             StringBuilder resultText = new StringBuilder();
             resultText.append("Selected Items: \n\n");
-            for (String item : selectedItems) {
-                resultText.append(item);
+            for (Book b : selectedItems) {
+                resultText.append(b.toString());
                 resultText.append("\n");
             }
 
@@ -172,13 +174,13 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
         // sloppily match text to check what tab we have
         if (tab.getText().equals(getString(R.string.title_section1))) {
             SparseBooleanArray checked = listView.getCheckedItemPositions();
-            selectedItems = new ArrayList<String>();
+            selectedItems = new ArrayList<Book>();
 
             for (int i = 0; i < checked.size(); i++) {
                 int position = checked.keyAt(i);
                 if (checked.valueAt(i)) {
-                    Log.d(TAG, "Selected item: " + adapter.getItem(position));
-                    selectedItems.add(adapter.getItem(position));
+                    Log.d(TAG, "Selected item: " + bookAdapter.getItem(position).toString());
+                    selectedItems.add(bookAdapter.getItem(position));
                 }
             }
         }
@@ -238,17 +240,19 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
 
             // convert list of book objects into string[]
             List<Book> list = db.getAllBooks();
-            String[] books = new String[list.size()];
+            Book[] books = new Book[list.size()];
             int i = 0;
             for (Book b : list) {
-                books[i] = b.toString();
+                books[i] = b;
                 i++;
             }
 
-            adapter = new ArrayAdapter<String>(super.getActivity(),
+            bookAdapter = new ArrayAdapter<Book>(super.getActivity(),
                     android.R.layout.simple_list_item_multiple_choice, books);
+            //stringAdapter = new ArrayAdapter<String>(super.getActivity(),
+            //        android.R.layout.simple_list_item_multiple_choice, books);
             listView.setChoiceMode(ListView.CHOICE_MODE_MULTIPLE);
-            listView.setAdapter(adapter);
+            listView.setAdapter(bookAdapter);
         }
 
         @Override
@@ -318,7 +322,8 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
                         output.close();
                     if (input != null)
                         input.close();
-                } catch (IOException ignored) {
+                } catch (IOException i) {
+                    i.printStackTrace();
                 }
 
                 if (connection != null) {
@@ -340,6 +345,14 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
                 public void onClick(View view) {
                     Log.d(TAG, "Mashing up selected books");
                     // download books if necessary
+
+                    for (Book book : selectedItems) {
+                        Log.d(TAG, "Selected: "+ book.toString() + " isDownloaded? " + book.is_downloaded());
+                        if (!book.is_downloaded()) {
+                            // then download it!
+                            Log.d(TAG, "Must DL: "+ book.toString());
+                        }
+                    }
                 }
             });
         }
