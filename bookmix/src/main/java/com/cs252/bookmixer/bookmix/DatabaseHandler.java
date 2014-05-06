@@ -215,11 +215,13 @@ public class DatabaseHandler extends SQLiteOpenHelper {
         boolean deleted = dbFile.delete();
 
         Log.d(TAG, "resetting the DB (was previously deleted? " + deleted);
+        Log.d(TAG, "does it still exist?: " + checkDataBase());
 
+        /*
         SQLiteDatabase db = this.getWritableDatabase();
         db.execSQL("DROP TABLE IF EXISTS " + TABLE_BOOKS);
 
-        /*
+
         // Create tables again
         try {
             createDataBase();
