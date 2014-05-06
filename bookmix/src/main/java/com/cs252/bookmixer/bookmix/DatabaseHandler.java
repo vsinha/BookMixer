@@ -32,11 +32,12 @@ public class DatabaseHandler extends SQLiteOpenHelper {
     private SQLiteDatabase mDataBase;
 
     // Books Table Columns names
-    private static final String KEY_ID = "_id"; // primary key
+    private static final String KEY_ID = "KEY_ID"; // primary key
     private static final String KEY_TITLE = "KEY_TITLE";
     private static final String KEY_AUTHOR = "KEY_AUTHOR";
     private static final String KEY_URL = "KEY_URL";
     private static final String KEY_DOWNLOADED = "KEY_DOWNLOADED"; // whether or not the book is dl'd
+    private static final String KEY_FILESIZE = "KEY_FILESIZE";
     private static final String KEY_TEXT = "KEY_TEXT"; // the book file itself
 
     public DatabaseHandler(Context context) {
@@ -63,6 +64,7 @@ public class DatabaseHandler extends SQLiteOpenHelper {
                 + KEY_AUTHOR + " VARCHAR,"
                 + KEY_URL + " VARCHAR, "
                 + KEY_DOWNLOADED + " BIT,"
+                + KEY_FILESIZE + " INTEGER,"
                 + KEY_TEXT + " TEXT"
                 + ")";
         db.execSQL(CREATE_CONTACTS_TABLE);
@@ -148,7 +150,7 @@ public class DatabaseHandler extends SQLiteOpenHelper {
         SQLiteDatabase db = this.getReadableDatabase();
 
         Cursor cursor = db.query(TABLE_BOOKS, new String[] { KEY_ID,
-                KEY_TITLE, KEY_AUTHOR, KEY_URL, KEY_DOWNLOADED, KEY_TEXT  },
+                KEY_TITLE, KEY_AUTHOR, KEY_URL, KEY_DOWNLOADED, KEY_FILESIZE, KEY_TEXT  },
                 KEY_ID + "=?",
                 new String[] { String.valueOf(id) }, null, null, null, null);
         if (cursor != null)

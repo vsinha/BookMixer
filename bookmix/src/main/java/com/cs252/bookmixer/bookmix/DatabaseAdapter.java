@@ -16,11 +16,12 @@ import java.util.List;
 public class DatabaseAdapter {
 
     // Books Table Columns names
-    private static final String KEY_ID = "_id"; // primary key
+    private static final String KEY_ID = "KEY_ID"; // primary key
     private static final String KEY_TITLE = "KEY_TITLE";
     private static final String KEY_AUTHOR = "KEY_AUTHOR";
     private static final String KEY_URL = "KEY_URL";
     private static final String KEY_DOWNLOADED = "KEY_DOWNLOADED"; // whether or not the book is dl'd
+    private static final String KEY_FILESIZE = "KEY_FILESIZE";
     private static final String KEY_TEXT = "KEY_TEXT"; // the book file itself
 
     protected static final String TAG = "DataAdapter";
@@ -38,7 +39,7 @@ public class DatabaseAdapter {
     public Book getBook(int id) {
         this.open();
         Cursor cursor = mDb.query(TABLE_BOOKS, new String[] { KEY_ID,
-                KEY_TITLE, KEY_AUTHOR, KEY_URL, KEY_DOWNLOADED, KEY_TEXT  },
+                KEY_TITLE, KEY_AUTHOR, KEY_URL, KEY_DOWNLOADED, KEY_FILESIZE, KEY_TEXT  },
                 KEY_ID + "=?",
                 new String[] { String.valueOf(id) }, null, null, null, null);
         if (cursor != null) {

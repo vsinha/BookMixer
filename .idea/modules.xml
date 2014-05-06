@@ -3,6 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/BookMixer.iml" filepath="$PROJECT_DIR$/BookMixer.iml" />
+      <module fileurl="file://$PROJECT_DIR$/BookMixerApp.iml" filepath="$PROJECT_DIR$/BookMixerApp.iml" />
       <module fileurl="file://$PROJECT_DIR$/bookmix/bookmix.iml" filepath="$PROJECT_DIR$/bookmix/bookmix.iml" />
     </modules>
   </component>
