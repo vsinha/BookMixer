@@ -71,7 +71,7 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
 
         // init the db
         db = new DatabaseAdapter(this);
-        db.resetDB();
+        //db.resetDB();
         db.createDatabase();
         db.open();
 
