@@ -1,8 +1,20 @@
 package com.cs252.bookmixer.bookmix;
 
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 
+import android.content.Context;
+import android.database.sqlite.SQLiteConstraintException;
+import android.database.sqlite.SQLiteException;
+import android.os.AsyncTask;
+import android.os.PowerManager;
 import android.support.v7.app.ActionBarActivity;
 import android.support.v7.app.ActionBar;
 import android.support.v4.app.Fragment;
@@ -11,6 +23,7 @@ import android.support.v4.app.FragmentTransaction;
 import android.support.v4.app.FragmentPagerAdapter;
 import android.os.Bundle;
 import android.support.v4.view.ViewPager;
+import android.util.Log;
 import android.util.SparseBooleanArray;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -48,7 +61,7 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
     TextView resultTextView;
     Button generateButton;
 
-    DatabaseHandler db;
+    DatabaseAdapter db;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -56,7 +69,21 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
         setContentView(R.layout.activity_main);
 
         // init the db
-        db = new DatabaseHandler(this);
+        db = new DatabaseAdapter(this);
+        db.resetDB();
+        //db.createDatabase();
+        db.open();
+
+        try {
+            System.out.println("adding test book");
+            db.addBook(new Book(0, "Metamorphosis", "Franz Kafka", "http://www.gutenberg.org/cache/epub/5200/pg5200.txt"));
+            db.addBook(new Book(1, "The Adventures of Tom Sawyer", "Mark Twain", "http://www.gutenberg.org/cache/epub/74/pg74.txt"));
+            db.addBook(new Book(2, "The Importance of Being Earnest", "Oscar Wilde", "http://www.gutenberg.org/cache/epub/844/pg844.txt"));
+        } catch (SQLiteConstraintException e) {
+            Log.e("MainActivity", "books were already added!");
+        } catch (SQLiteException e) {
+            Log.e("MainActivity", "no books table");
+        }
 
         // Set up the action bar.
         final ActionBar actionBar = getSupportActionBar();
@@ -210,9 +237,17 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
         private void setListViewHandler(View view) {
             listView = (ListView) view.findViewById(R.id.bookList);
 
-            String[] sports = getResources().getStringArray(R.array.sports_array);
+            // convert list of book objects into string[]
+            List<Book> list = db.getAllBooks();
+            String[] books = new String[list.size()];
+            int i = 0;
+            for (Book b : list) {
+                books[i] = b.toString();
+                i++;
+            }
+
             adapter = new ArrayAdapter<String>(super.getActivity(),
-                    android.R.layout.simple_list_item_multiple_choice, sports);
+                    android.R.layout.simple_list_item_multiple_choice, books);
             listView.setChoiceMode(ListView.CHOICE_MODE_MULTIPLE);
             listView.setAdapter(adapter);
         }
@@ -227,27 +262,86 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
         }
     }
 
+    protected class DownloadTask extends AsyncTask<Book, Integer, Book> {
+        private Context context;
+        private PowerManager.WakeLock mWakeLock;
+
+        public DownloadTask(Context context) {
+            this.context = context;
+        }
+
+        @Override
+        protected Book doInBackground(Book ... books) {
+            InputStream input = null;
+            OutputStream output = null;
+            HttpURLConnection connection = null;
+            try {
+                URL url = new URL(books[0].getURL());
+                connection = (HttpURLConnection) url.openConnection();
+                connection.connect();
+
+                // expect HTTP 200 OK, so we don't mistakenly save error report
+                // instead of the file
+                if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
+                    System.out.println("Server returned HTTP " + connection.getResponseCode()
+                            + " " + connection.getResponseMessage());
+                }
+
+                // this will be useful to display download percentage
+                // might be -1: server did not report the length
+                int fileLength = connection.getContentLength();
+
+                // download the file
+                input = connection.getInputStream();
+                output = new FileOutputStream("/sdcard/file_name.extension");
+
+                byte data[] = new byte[4096];
+                long total = 0;
+                int count;
+                while ((count = input.read(data)) != -1) {
+                    // allow canceling with back button
+                    if (isCancelled()) {
+                        input.close();
+                        return null;
+                    }
+                    total += count;
+                    // publishing the progress....
+                    if (fileLength > 0) // only if total length is known
+                        publishProgress((int) (total * 100 / fileLength));
+                    output.write(data, 0, count);
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+                return null;
+            } finally {
+                try {
+                    if (output != null)
+                        output.close();
+                    if (input != null)
+                        input.close();
+                } catch (IOException ignored) {
+                }
+
+                if (connection != null) {
+                    connection.disconnect();
+                }
+            }
+            return null;
+        }
+    }
+
     // interface for actually generating the mashups
     public class MashupFragment extends Fragment {
 
         // handler for the generate button
         private void setGenerateButtonHandler(View view) {
-
             generateButton = (Button) view.findViewById(R.id.generate_button);
             generateButton.setOnClickListener(new OnClickListener() {
                 @Override
                 public void onClick(View view) {
                     System.out.println("Mashing up selected books");
 
-                    // all this is testing db functionality
-                    // pretend to create a new db entry
-                    System.out.println("adding book");
-                    db.addBook(new Book(0, "testbook", "testauthor", "2001", 1));
-
-                    // read db entry
-                    System.out.println("getting book");
-                    Book book = db.getBook(0);
-                    System.out.println(book);
+                    // download books if necessary
                 }
             });
         }
