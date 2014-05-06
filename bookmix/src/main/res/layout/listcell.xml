@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+        android:id="@+id/listCell"
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
+        android:paddingLeft="10dp"
+        android:paddingRight="10dp"
+        android:paddingTop="10dp"
+        android:paddingBottom="10dp"
+        android:background="@drawable/bookselectdrawable"
+    >
+
+    <TextView xmlns:android="http://schemas.android.com/apk/res/android"
+        android:id="@+id/title_text"
+        android:text="This is a very long sentence the quick brown fox jumped over the lazy dog"
+        android:textColor="@color/darkBlue"
+        android:background="@color/transparent"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:paddingBottom="4dp"
+        android:textSize="16sp"
+        android:layout_alignParentLeft="true"
+        android:layout_toLeftOf="@id/checkbox"
+    />
+
+    <TextView xmlns:android="http://schemas.android.com/apk/res/android"
+        android:id="@+id/author_text"
+        android:text="@string/defaultListText"
+        android:textColor="@color/darkBlue"
+        android:background="@color/transparent"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="12sp"
+        android:layout_below="@id/title_text"
+        android:layout_alignParentLeft="true"
+        android:layout_toLeftOf="@id/checkbox"
+    />
+
+    <CheckBox
+        android:id="@+id/checkbox"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@color/transparent"
+        android:layout_alignParentRight="true"
+        android:focusable="false"
+        android:focusableInTouchMode="false"
+        android:gravity=""
+    />
+
+</RelativeLayout>

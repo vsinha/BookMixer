@@ -4,12 +4,12 @@ package com.cs252.bookmixer.bookmix;
  * Created by viraj on 5/5/14.
  */
 public class Book {
-    int _id; // primary db key
-    String _title;
-    String _author;
-    String _URL;
-    boolean is_downloaded;
-    String _text;
+    private int _id; // primary db key
+    private String _title;
+    private String _author;
+    private String _URL;
+    private boolean is_downloaded;
+    private String _text;
 
     // if we have the string that is the book text already
     public Book(int id, String title, String author, String URL, String text) {

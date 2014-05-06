@@ -12,11 +12,14 @@ import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.ExecutionException;
 
 import android.annotation.TargetApi;
+import android.app.Activity;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.graphics.Color;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.PowerManager;
@@ -36,40 +39,34 @@ import android.view.MenuItem;
 import android.view.View.OnClickListener;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
+import android.widget.AdapterView.OnItemClickListener;
 import android.widget.ArrayAdapter;
+import android.widget.BaseAdapter;
 import android.widget.Button;
+import android.widget.CheckBox;
+import android.widget.CompoundButton;
 import android.widget.ListView;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
 public class MainActivity extends ActionBarActivity implements ActionBar.TabListener {
 
-    /**
-     * The {@link android.support.v4.view.PagerAdapter} that will provide
-     * fragments for each of the sections. We use a
-     * {@link FragmentPagerAdapter} derivative, which will keep every
-     * loaded fragment in memory. If this becomes too memory intensive, it
-     * may be best to switch to a
-     * {@link android.support.v4.app.FragmentStatePagerAdapter}.
-     */
     SectionsPagerAdapter mSectionsPagerAdapter;
-
-    /**
-     * The {@link ViewPager} that will host the section contents.
-     */
     ViewPager mViewPager;
 
     DatabaseAdapter db;
 
-    ArrayAdapter<Book> bookAdapter;
+    //ArrayAdapter<Book> bookAdapter;
+    BookAdapter bookAdapter;
     ArrayList<Book> selectedItems;
-
     ListView listView;
     TextView outputTextView;
     Button generateButton;
     ProgressDialog progressDialog;
 
-    private static final String TAG = "MainActivity";
+    private static final String TAG = "MainActivity"; // for debugging
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -79,7 +76,7 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
         // init the db
         db = new DatabaseAdapter(this);
         //db.resetDB();
-        db.createDatabase();
+        db.createDatabase();  // copies if necessary, does nothing otherwise
         db.open();
 
         // instantiate progressBar
@@ -88,6 +85,8 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
         progressDialog.setIndeterminate(true);
         progressDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
         progressDialog.setCancelable(true);
+
+        selectedItems = new ArrayList<Book>();
 
         // Set up the action bar.
         final ActionBar actionBar = getSupportActionBar();
@@ -149,22 +148,18 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
         Log.d(TAG, "selected: " + tab.getText());
 
         if (tab.getText().equals(getString(R.string.title_section2))) {
-
             // update the textview to reflect what's selected
-            Log.d(TAG, "Updating result textview");
-
             StringBuilder resultText = new StringBuilder();
             resultText.append("Selected Items: \n\n");
             for (Book b : selectedItems) {
+                Log.d(TAG, "appending" + b.toString());
                 resultText.append(b.toString());
                 resultText.append("\n");
             }
-
             outputTextView.setText(resultText.toString());
         }
 
-        // When the given tab is selected, switch to the corresponding page in
-        // the ViewPager.
+        // When the given tab is selected, switch to the corresponding page in the ViewPager.
         mViewPager.setCurrentItem(tab.getPosition());
     }
 
@@ -174,16 +169,7 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
 
         // (sloppily) match text to check what tab we're on
         if (tab.getText().equals(getString(R.string.title_section1))) {
-            SparseBooleanArray checked = listView.getCheckedItemPositions();
-            selectedItems = new ArrayList<Book>();
 
-            for (int i = 0; i < checked.size(); i++) {
-                int position = checked.keyAt(i);
-                if (checked.valueAt(i)) {
-                    Log.d(TAG, "Selected item: " + bookAdapter.getItem(position).toString());
-                    selectedItems.add(bookAdapter.getItem(position));
-                }
-            }
         }
     }
 
@@ -233,20 +219,6 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
     // fragment with listview to select books
     public class BookSelectFragment extends Fragment {
 
-        private void setListViewHandler(View view) {
-            listView = (ListView) view.findViewById(R.id.bookList);
-
-            // convert list of books into array[]
-            List<Book> list = db.getAllBooks();
-            Book[] books = list.toArray(new Book[list.size()]);
-
-            // set adapter
-            bookAdapter = new ArrayAdapter<Book>(super.getActivity(),
-                    android.R.layout.simple_list_item_multiple_choice, books);
-            listView.setChoiceMode(ListView.CHOICE_MODE_MULTIPLE); // able to select multiples
-            listView.setAdapter(bookAdapter);
-        }
-
         @Override
         public View onCreateView(LayoutInflater inflater, ViewGroup container,
                                  Bundle savedInstanceState) {
@@ -255,6 +227,285 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
             setListViewHandler(rootView);
             return rootView;
         }
+
+        private void setListViewHandler(View view) {
+            listView = (ListView) view.findViewById(R.id.bookList);
+
+            // convert list of books into array[]
+            List<Book> list = db.getAllBooks();
+
+            // set adapter
+            bookAdapter = new BookAdapter(super.getActivity(), R.layout.listcell, list);
+            listView.setChoiceMode(ListView.CHOICE_MODE_MULTIPLE); // able to select multiples
+            listView.setAdapter(bookAdapter);
+
+            listView.setOnItemClickListener(new OnItemClickListener() {
+                public void onItemClick(AdapterView<?> parent, View view,int position, long id) {
+                    if (listView.isSelected()) {
+                        Log.d(TAG, "Unselected: " + bookAdapter.getItem(position));
+                        view.setSelected(false);
+                        selectedItems.remove(bookAdapter.getItem(position));
+                        //listView.setItemChecked(position, false);
+                    } else {
+                        Log.d(TAG, "Selected: " + bookAdapter.getItem(position));
+                        view.setSelected(true);
+                        selectedItems.add(bookAdapter.getItem(position));
+                        //listView.setItemChecked(position, true);
+                    }
+                    bookAdapter.notifyDataSetChanged();
+
+                    // do the dl
+                    // bookAdapter.rowSelected(view, position);
+                }
+            });
+        }
+    }
+
+    private class BookAdapter extends ArrayAdapter<Book> {
+        private List<Book> books;
+        Context context;
+        LayoutInflater inflater;
+        SparseBooleanArray checked;
+
+        public BookAdapter(Context context, int textViewResourceId, List<Book> books) {
+            super(context, textViewResourceId, books);
+            this.books = books;
+
+            System.out.println(books);
+            this.context = context;
+
+            inflater = (LayoutInflater) getContext()
+                    .getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+        }
+
+        /*
+        public void rowSelected(View v, int position) {
+            // if row is selected, proceed to download the book
+            Book b = getItem(position);
+            if (!b.is_downloaded()) {
+                Toast.makeText(context, "Downloading " + b.get_title(), Toast.LENGTH_LONG).show();
+                new DownloadTextTask(context).execute(b);
+            }
+
+            // select what we've downloaded
+            CheckBox cb = (CheckBox) v.findViewById(R.id.checkbox);
+            cb.toggle();
+
+            // update
+            this.notifyDataSetChanged();
+        }
+        */
+
+        public void setCheckedList() {
+            checked = listView.getCheckedItemPositions();
+            notifyDataSetChanged();
+        }
+
+        @Override
+        public View getView(final int position, View convertView, ViewGroup parent) {
+            ViewHolder holder = null;
+
+            if (convertView == null) { // create a new one
+                convertView = inflater.inflate(R.layout.listcell, parent, false);
+
+                holder = new ViewHolder();
+                holder.checkBox = (CheckBox) convertView.findViewById( R.id.checkbox );
+                holder.title = (TextView) convertView.findViewById(R.id.title_text);
+                holder.author = (TextView) convertView.findViewById(R.id.author_text);
+                convertView.setTag(holder);
+
+            } else { // recycle an old one
+                holder = (ViewHolder) convertView.getTag();
+            }
+
+            Book b = books.get(position);
+
+            holder.title.setText(b.get_title());
+            holder.author.setText(b.get_author());
+
+            setCheckedList();
+            holder.checkBox.setChecked( checked.get( position ) );
+
+            /*
+            final View view = convertView;
+            holder.checkBox.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+                @Override
+                public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
+                    Log.d(TAG, "checkbox state: " + b);
+                    if (b) {
+                        view.setBackgroundColor(getResources().getColor(R.color.lightgreen));
+                    } else {
+                        view.setBackgroundColor(getResources().getColor(R.color.transparent));
+                    }
+                }
+            });
+            */
+            return convertView;
+        }
+
+        @Override
+        public int getCount() {
+            return books.size();
+        }
+
+        @Override
+        public Book getItem(int position) {
+            return books.get(position);
+        }
+
+        @Override
+        public long getItemId(int position) {
+            return 0;
+        }
+    }
+
+    static class ViewHolder {
+        TextView title;
+        TextView author;
+        CheckBox checkBox;
+    }
+
+    private class DownloadTextTask extends AsyncTask<Book, Integer, Book> {
+        static final String TAG = "DownloadTextTask: ";
+
+        private Context context;
+        private PowerManager.WakeLock mWakeLock;
+
+        public DownloadTextTask(Context context) {
+            this.context = context;
+        }
+
+        @Override
+        protected Book doInBackground(Book ... books) {
+            InputStream input = null;
+            HttpURLConnection connection = null;
+            String downloadedText;
+            Book bookWithText;
+
+            progressDialog.setMessage("Downloading " + books[0].get_title());
+            try {
+                Log.d(TAG, "attempting dl from url: " + books[0].getURL());
+                URL url = new URL(books[0].getURL());
+                connection = (HttpURLConnection) url.openConnection();
+                populateDesktopHttpHeaders(connection);
+                connection.connect();
+
+                // expect HTTP 200 OK, so we don't mistakenly save error report
+                // instead of the file
+                if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
+                    Log.d(TAG, "Server returned HTTP " + connection.getResponseCode()
+                            + " " + connection.getResponseMessage());
+                }
+
+                // actually download the file
+                input = connection.getInputStream();
+                BufferedReader br = new BufferedReader(new InputStreamReader(input));
+                StringBuilder sb = new StringBuilder();
+
+                String line;
+                long total = 0;
+                long fileSize = 0;
+                int count;
+                System.out.print("writing to buffered reader");
+
+                while (true) {
+                    line = br.readLine();
+                    if (line == null) {
+                        break;
+                    }
+
+                    // publish progress...
+                    total += line.length();
+                    if (fileSize > 0) {// only if total length is known
+                        publishProgress((int) (total * 100 / fileSize));
+                    }
+                    sb.append(line);
+                }
+                br.close(); // done with buffered reader
+
+                // put the text in the book
+                Log.d(TAG, "writing to output string");
+                downloadedText = sb.toString();
+                bookWithText = books[0];
+                bookWithText.set_text(downloadedText);
+
+            } catch (Exception e) {
+                e.printStackTrace();
+                return null; // :(
+            } finally { // clean up the connection
+                Log.d(TAG, "executing 'finally'");
+                try {
+                    if (input != null) {
+                        Log.d(TAG, "closing input");
+                        input.close();
+                    }
+                } catch (IOException i) {
+                    i.printStackTrace();
+                }
+                if (connection != null) {
+                    Log.d(TAG, "disconnecting connection");
+                    connection.disconnect();
+                }
+            }
+            Log.d(TAG, "returning from downloader");
+            return bookWithText;
+        }
+
+        @Override
+        protected void onPreExecute() {
+            super.onPreExecute();
+
+            // take CPU lock to prevent CPU from going off even if the user
+            // presses the power button during download
+            PowerManager pm = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
+            mWakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,
+                    getClass().getName());
+            mWakeLock.acquire();
+
+            Log.d(TAG, "Showing progress bar");
+            progressDialog.show();
+        }
+
+        @Override
+        protected void onProgressUpdate(Integer... progress) {
+            super.onProgressUpdate(progress);
+            // if we get here, length is known, now set indeterminate to false
+            progressDialog.setIndeterminate(false);
+            progressDialog.setMax(100);
+            progressDialog.setProgress(progress[0]);
+        }
+
+        @Override
+        protected void onPostExecute(Book result) {
+            Log.d(TAG, "doing postExecute");
+
+            mWakeLock.release();
+            progressDialog.dismiss();
+
+            Toast toast = new Toast(getApplicationContext());
+            if (result == null) {
+                // null because AsyncTask hasn't done its task
+                toast.makeText(context,"Download error", Toast.LENGTH_LONG).show();
+
+            } else {
+                Log.v(TAG, "File downloaded");
+                outputTextView.setText(result.toString());
+                toast.makeText(context,"File downloaded", Toast.LENGTH_SHORT).show();
+
+                // update the list item's color to signify we have the text
+
+                // update the database entry (add the text)
+                db.updateBook(result);
+
+                // update the view in another thread
+                final String text = result.get_text();
+                runOnUiThread(new Runnable() {
+                    public void run() {
+                        outputTextView.setText(text);
+                    }
+                });
+            }
+        }
     }
 
     // fragment for generating the mashups
@@ -262,151 +513,6 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
 
         private void mashUpBooks(View view) {
             // TODO mash them up after all books are done downloading
-        }
-
-        private class DownloadTextTask extends AsyncTask<Book, Integer, Book> {
-            static final String TAG = "DownloadTextTask: ";
-
-            private Context context;
-            private PowerManager.WakeLock mWakeLock;
-
-            public DownloadTextTask(Context context) {
-                this.context = context;
-            }
-
-            @Override
-            protected Book doInBackground(Book ... books) {
-                InputStream input = null;
-                HttpURLConnection connection = null;
-                String downloadedText;
-                Book bookWithText;
-
-                progressDialog.setMessage("Downloading " + books[0].get_title());
-                try {
-                    Log.d(TAG, "attempting dl from url: " + books[0].getURL());
-                    URL url = new URL(books[0].getURL());
-                    connection = (HttpURLConnection) url.openConnection();
-                    populateDesktopHttpHeaders(connection);
-                    connection.connect();
-
-                    // to display download percentage
-                    // might be -1: server did not report the length
-                    //List values = connection.getHeaderFields().get("content-Length");
-                    long fileSize = 0;
-                    try {
-                        fileSize = Long.parseLong(connection.getHeaderField("Content-Length"));
-                    } catch (NumberFormatException e) {
-                    }
-                    Log.d(TAG, "fileSize: " + fileSize);
-
-                    // expect HTTP 200 OK, so we don't mistakenly save error report
-                    // instead of the file
-                    if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
-                        Log.d(TAG, "Server returned HTTP " + connection.getResponseCode()
-                                + " " + connection.getResponseMessage());
-                    }
-
-                    // actually download the file
-                    input = connection.getInputStream();
-                    BufferedReader br = new BufferedReader(new InputStreamReader(input));
-                    StringBuilder sb = new StringBuilder();
-
-                    String line;
-                    long total = 0;
-                    int count;
-                    System.out.print("writing to buffered reader");
-
-                    while (true) {
-                        line = br.readLine();
-                        if (line == null) {
-                            break;
-                        }
-
-                        // publish progress...
-                        total += line.length();
-                        if (fileSize > 0) {// only if total length is known
-                            publishProgress((int) (total * 100 / fileSize));
-                        }
-                        sb.append(line);
-                    }
-                    br.close(); // done with buffered reader
-
-                    // put the text in the book
-                    Log.d(TAG, "writing to output string");
-                    downloadedText = sb.toString();
-                    bookWithText = books[0];
-                    bookWithText.set_text(downloadedText);
-
-                } catch (Exception e) {
-                    e.printStackTrace();
-                    return null; // :(
-                } finally { // clean up the connection
-                    Log.d(TAG, "executing 'finally'");
-                    try {
-                        if (input != null) {
-                            Log.d(TAG, "closing input");
-                            input.close();
-                        }
-                    } catch (IOException i) {
-                        i.printStackTrace();
-                    }
-                    if (connection != null) {
-                        Log.d(TAG, "disconnecting connection");
-                        connection.disconnect();
-                    }
-                }
-                Log.d(TAG, "returning from downloader");
-                return bookWithText;
-            }
-
-            @Override
-            protected void onPreExecute() {
-                super.onPreExecute();
-                // take CPU lock to prevent CPU from going off even if the user
-                // presses the power button during download
-                PowerManager pm = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
-                mWakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,
-                        getClass().getName());
-                mWakeLock.acquire();
-                progressDialog.show();
-            }
-
-            @Override
-            protected void onProgressUpdate(Integer... progress) {
-                super.onProgressUpdate(progress);
-                // if we get here, length is known, now set indeterminate to false
-                progressDialog.setIndeterminate(false);
-                progressDialog.setMax(100);
-                progressDialog.setProgress(progress[0]);
-            }
-
-            @Override
-            protected void onPostExecute(Book result) {
-                Log.d(TAG, "doing postExecute");
-
-                mWakeLock.release();
-                progressDialog.dismiss();
-
-                Toast toast = new Toast(getApplicationContext());
-                if (result == null) {
-                    // null because AsyncTask hasn't done its task
-                    //Log.v("download error", result.get_title());
-                    toast.makeText(context,"Download error", Toast.LENGTH_LONG).show();
-
-                } else {
-                    Log.v("File downloaded", "null");
-                    outputTextView.setText(result.toString());
-                    toast.makeText(context,"File downloaded", Toast.LENGTH_SHORT).show();
-
-                    // update the view in another thread
-                    final String text = result.get_text();
-                    runOnUiThread(new Runnable() {
-                        public void run() {
-                            outputTextView.setText(text);
-                        }
-                    });
-                }
-            }
         }
 
         // handler for the generate button
@@ -419,24 +525,25 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
                     Log.d(TAG, "Mashing up selected books");
 
                     // first, download books if necessary
+                    //new DownloadTextTask(getApplicationContext()).execute(selectedItems).get();
                     for (Book book : selectedItems) {
-                        Log.d(TAG, "Selected: " + book.toString() +
-                                " isDownloaded? " + book.is_downloaded());
+                        Log.d(TAG, "Selected: " + book.toString()
+                                + " isDownloaded? " + book.is_downloaded());
 
                         if (!book.is_downloaded()) { // then download it!
-                            Log.d(TAG, "Must DL: " + book.toString());
+                            Log.d(TAG, "Downloading: " + book.toString());
 
                             Context context = getApplicationContext();
+                            // multi-thread if possible
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
-                                // multi-thread if possible
                                 new DownloadTextTask(context)
                                         .executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, book);
                             } else {
-                                try {
-                                    new DownloadTextTask(context).execute(book).get();
-                                } catch (Exception e) {
-                                    e.printStackTrace();
-                                }
+                                //try {
+                                //    new DownloadTextTask(context).execute(book).get();
+                                //} catch (Exception e) {
+                                //    e.printStackTrace();
+                                //}
                             }
                         }
                     }
