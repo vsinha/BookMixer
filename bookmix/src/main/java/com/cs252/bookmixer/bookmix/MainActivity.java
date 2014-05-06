@@ -8,13 +8,17 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
+import android.annotation.TargetApi;
 import android.app.ProgressDialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.os.AsyncTask;
+import android.os.Build;
 import android.os.PowerManager;
 import android.support.v7.app.ActionBarActivity;
 import android.support.v7.app.ActionBar;
@@ -55,17 +59,15 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
      */
     ViewPager mViewPager;
 
-    ListView listView;
-    ArrayAdapter<Book> bookAdapter;
-    ArrayAdapter<String> stringAdapter; // strings for the listView
-    ArrayList<Book> selectedItems;
-    //ArrayList<String> selectedItems;
-
-    TextView resultTextView;
-    Button generateButton;
-    ProgressDialog mProgressDialog;
-
     DatabaseAdapter db;
+
+    ArrayAdapter<Book> bookAdapter;
+    ArrayList<Book> selectedItems;
+
+    ListView listView;
+    TextView outputTextView;
+    Button generateButton;
+    ProgressDialog progressDialog;
 
     private static final String TAG = "MainActivity";
 
@@ -80,26 +82,12 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
         db.createDatabase();
         db.open();
 
-        /*
-        try {
-            System.out.println("adding test book");
-            db.addBook(new Book(0, "Metamorphosis", "Franz Kafka", "http://www.gutenberg.org/cache/epub/5200/pg5200.txt"));
-            db.addBook(new Book(1, "The Adventures of Tom Sawyer", "Mark Twain", "http://www.gutenberg.org/cache/epub/74/pg74.txt"));
-            db.addBook(new Book(2, "The Importance of Being Earnest", "Oscar Wilde", "http://www.gutenberg.org/cache/epub/844/pg844.txt"));
-        } catch (SQLiteConstraintException e) {
-            Log.e("MainActivity", "books were already added!");
-        } catch (SQLiteException e) {
-            Log.e("MainActivity", "no books table");
-        }
-        */
-
         // instantiate progressBar
-        mProgressDialog = new ProgressDialog(this);
-        mProgressDialog.setMessage("A message");
-        mProgressDialog.setIndeterminate(true);
-        mProgressDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
-        mProgressDialog.setCancelable(true);
-
+        progressDialog = new ProgressDialog(this);
+        progressDialog.setMessage("A message");
+        progressDialog.setIndeterminate(true);
+        progressDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
+        progressDialog.setCancelable(true);
 
         // Set up the action bar.
         final ActionBar actionBar = getSupportActionBar();
@@ -172,7 +160,7 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
                 resultText.append("\n");
             }
 
-            resultTextView.setText(resultText.toString());
+            outputTextView.setText(resultText.toString());
         }
 
         // When the given tab is selected, switch to the corresponding page in
@@ -184,7 +172,7 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
     public void onTabUnselected(ActionBar.Tab tab, FragmentTransaction fragmentTransaction) {
         Log.d(TAG, "unselected: " + tab.getText());
 
-        // sloppily match text to check what tab we have
+        // (sloppily) match text to check what tab we're on
         if (tab.getText().equals(getString(R.string.title_section1))) {
             SparseBooleanArray checked = listView.getCheckedItemPositions();
             selectedItems = new ArrayList<Book>();
@@ -216,229 +204,231 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
         @Override
         public Fragment getItem(int position) {
             // getItem is called to instantiate the fragment for the given page.
-            // Return a PlaceholderFragment (defined as a static inner class below).
             if (position == 0) {
                 return new BookSelectFragment();
             } else if (position == 1) {
                 return new MashupFragment();
-            } else {  // returns the default if needed for some reason (rather than just breaking)
-                return PlaceholderFragment.newInstance(position + 1);
+            } else {
+                return null;
             }
         }
 
         @Override
-        public int getCount() {
-            // number of total pages.
+        public int getCount() { // number of total pages.
             return 2;
         }
 
         @Override
         public CharSequence getPageTitle(int position) {
-            Locale l = Locale.getDefault();
             switch (position) {
                 case 0:
                     return getString(R.string.title_section1);
                 case 1:
                     return getString(R.string.title_section2);
             }
-            return null;
+            return null; // ya dun goofed
         }
     }
 
-    // listview to select books
+    // fragment with listview to select books
     public class BookSelectFragment extends Fragment {
 
         private void setListViewHandler(View view) {
             listView = (ListView) view.findViewById(R.id.bookList);
 
-            // convert list of book objects into string[]
+            // convert list of books into array[]
             List<Book> list = db.getAllBooks();
-            Book[] books = new Book[list.size()];
-            int i = 0;
-            for (Book b : list) {
-                books[i] = b;
-                i++;
-            }
+            Book[] books = list.toArray(new Book[list.size()]);
 
+            // set adapter
             bookAdapter = new ArrayAdapter<Book>(super.getActivity(),
                     android.R.layout.simple_list_item_multiple_choice, books);
-            //stringAdapter = new ArrayAdapter<String>(super.getActivity(),
-            //        android.R.layout.simple_list_item_multiple_choice, books);
-            listView.setChoiceMode(ListView.CHOICE_MODE_MULTIPLE);
+            listView.setChoiceMode(ListView.CHOICE_MODE_MULTIPLE); // able to select multiples
             listView.setAdapter(bookAdapter);
         }
 
         @Override
         public View onCreateView(LayoutInflater inflater, ViewGroup container,
                                  Bundle savedInstanceState) {
-            Log.d(TAG, "Creating book select view");
+            Log.d(TAG, "Creating book select fragment");
             View rootView = inflater.inflate(R.layout.fragment_bookselect, container, false);
             setListViewHandler(rootView);
             return rootView;
         }
     }
 
-    protected class DownloadTask extends AsyncTask<Book, Integer, Book> {
-        private Context context;
-        private PowerManager.WakeLock mWakeLock;
-        String output;
-
-        public DownloadTask(Context context) {
-            this.context = context;
-        }
-
-        @Override
-        protected Book doInBackground(Book ... books) {
-            output = null;
-            InputStream input = null;
-            HttpURLConnection connection = null;
-            try {
-                Log.d(TAG, "attempting dl from url: " + books[0].getURL());
-                URL url = new URL(books[0].getURL());
-                connection = (HttpURLConnection) url.openConnection();
-                connection.connect();
-
-                // expect HTTP 200 OK, so we don't mistakenly save error report
-                // instead of the file
-                if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
-                    Log.d(TAG, "Server returned HTTP " + connection.getResponseCode()
-                            + " " + connection.getResponseMessage());
-                }
-
-                // this will be useful to display download percentage
-                // might be -1: server did not report the length
-                List values = connection.getHeaderFields().get("content-Length");
-                int fileLength = 0;
-                if (values != null && !values.isEmpty()) {
-                    String sLength = (String) values.get(0);
-                    if (sLength != null) {
-                        fileLength = Integer.parseInt(sLength);
-                    }
-                }
-
-                Log.d(TAG, "file length: " + fileLength);
-
-                // download the file
-                input = connection.getInputStream();
-
-                BufferedReader br = null;
-                StringBuilder sb = new StringBuilder();
-
-                String line;
-                long total = 0;
-                int count;
-                br = new BufferedReader(new InputStreamReader(input));
-                while ((line = br.readLine()) != null) {
-                    // publishing the progress....
-                    total += 1;
-                    if (fileLength > 0) // only if total length is known
-                        publishProgress((int) (total * 100 / fileLength));
-                    Log.d(TAG, line);
-
-                    sb.append(line);
-                }
-
-                Log.d(TAG, "writing to output string");
-                output = sb.toString();
-
-            } catch (Exception e) {
-                e.printStackTrace();
-                return null;
-            } finally {
-                try {
-                    if (output != null)
-                        //output.close();
-                    if (input != null)
-                        input.close();
-                } catch (IOException i) {
-                    i.printStackTrace();
-                }
-
-                if (connection != null) {
-                    connection.disconnect();
-                }
-            }
-            Log.d(TAG, "returning from downloader");
-
-            books[0]._text = output.toString();
-            return books[0];
-        }
-
-        @Override
-        protected void onPreExecute() {
-            super.onPreExecute();
-            // take CPU lock to prevent CPU from going off if the user
-            // presses the power button during download
-            PowerManager pm = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
-            mWakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,
-                    getClass().getName());
-            mWakeLock.acquire();
-            mProgressDialog.show();
-        }
-
-        @Override
-        protected void onProgressUpdate(Integer... progress) {
-            super.onProgressUpdate(progress);
-            // if we get here, length is known, now set indeterminate to false
-            mProgressDialog.setIndeterminate(false);
-            mProgressDialog.setMax(100);
-            mProgressDialog.setProgress(progress[0]);
-        }
-
-        protected void onPostExecute(Book result) {
-            Log.d(TAG, "doing postExecute");
-            mWakeLock.release();
-            mProgressDialog.dismiss();
-            Toast toast = new Toast(getApplicationContext());
-            /*
-            if (result != null) {
-                toast.makeText(context,"Download error: "+result, Toast.LENGTH_LONG).show();
-            } else {
-                resultTextView.setText(output.toString());
-                toast.makeText(context,"File downloaded", Toast.LENGTH_SHORT).show();
-            }
-            */
-
-            resultTextView.setText(result._text);
-        }
-    }
-
-    // interface for actually generating the mashups
+    // fragment for generating the mashups
     public class MashupFragment extends Fragment {
 
+        private void mashUpBooks(View view) {
+            // TODO mash them up after all books are done downloading
+        }
+
         // handler for the generate button
+        // we download text from gutenberg here
         private void setGenerateButtonHandler(View view) {
             generateButton = (Button) view.findViewById(R.id.generate_button);
             generateButton.setOnClickListener(new OnClickListener() {
                 @Override
                 public void onClick(View view) {
                     Log.d(TAG, "Mashing up selected books");
-                    // download books if necessary
 
+                    // first, download books if necessary
                     for (Book book : selectedItems) {
-                        Log.d(TAG, "Selected: "+ book.toString() + " isDownloaded? " + book.is_downloaded());
-                        Log.d(TAG, "first text: " + book.get_text().toString().split(" "));
-                        if (!book.is_downloaded()) {
-                            // then download it!
-                            Log.d(TAG, "Must DL: "+ book.toString());
-                            final DownloadTask dt = new DownloadTask(getApplicationContext());
-                            dt.execute(book);
+                        Log.d(TAG, "Selected: " + book.toString() +
+                                " isDownloaded? " + book.is_downloaded());
 
-                            Log.d(TAG, "post download");
+                        if (!book.is_downloaded()) { // then download it!
+                            Log.d(TAG, "Must DL: "+ book.toString());
+                            new DownloadTextTask(getActivity()).execute(book);  // launch async task
                         }
                     }
                 }
             });
         }
 
+        private class DownloadTextTask extends AsyncTask<Book, Integer, Book> {
+            static final String TAG = "DownloadTextTask: ";
+
+            private Context context;
+            private PowerManager.WakeLock mWakeLock;
+
+            public DownloadTextTask(Context context) {
+                this.context = context;
+            }
+
+            @Override
+            protected Book doInBackground(Book ... books) {
+                InputStream input = null;
+                HttpURLConnection connection = null;
+                String downloadedText;
+                Book bookWithText;
+
+                progressDialog.setMessage("Downloading " + books[0].get_title());
+                try {
+                    Log.d(TAG, "attempting dl from url: " + books[0].getURL());
+                    URL url = new URL(books[0].getURL());
+                    connection = (HttpURLConnection) url.openConnection();
+                    populateDesktopHttpHeaders(connection);
+                    connection.connect();
+
+                    // expect HTTP 200 OK, so we don't mistakenly save error report
+                    // instead of the file
+                    if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
+                        Log.d(TAG, "Server returned HTTP " + connection.getResponseCode()
+                                + " " + connection.getResponseMessage());
+                    }
+
+                    // to display download percentage
+                    // might be -1: server did not report the length
+                    //List values = connection.getHeaderFields().get("content-Length");
+                    long fileSize = 0;
+                    try {
+                        fileSize = Long.parseLong(connection.getHeaderField("Content-Length"));
+                    } catch (NumberFormatException e) {
+                    }
+                    Log.d(TAG, "fileSize: " + fileSize);
+
+                    // actually download the file
+                    input = connection.getInputStream();
+                    BufferedReader br = null;
+                    StringBuilder sb = new StringBuilder();
+                    String line;
+                    long total = 0;
+                    int count;
+                    br = new BufferedReader(new InputStreamReader(input));
+                    System.out.print("writing to buffered reader");
+                    while ((line = br.readLine()) != null) {
+                        // publish progress...
+                        total += line.length();
+                        if (fileSize > 0) {// only if total length is known
+                            publishProgress((int) (total * 100 / fileSize));
+                        }
+                        sb.append(line);
+                    }
+                    // done with buffered reader
+
+                    // put the text in the book
+                    Log.d(TAG, "writing to output string");
+                    downloadedText = sb.toString();
+                    bookWithText = books[0];
+                    bookWithText.set_text(downloadedText);
+
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    return null; // :(
+                } finally { // clean up the connection
+                    Log.d(TAG, "executing 'finally'");
+                    try {
+                        if (input != null) {
+                            Log.d(TAG, "closing input");
+                            input.close();
+                        }
+                    } catch (IOException i) {
+                        i.printStackTrace();
+                    }
+                    if (connection != null) {
+                        Log.d(TAG, "disconnecting connection");
+                        connection.disconnect();
+                    }
+                }
+                Log.d(TAG, "returning from downloader");
+                return bookWithText;
+            }
+
+            @Override
+            protected void onPreExecute() {
+                super.onPreExecute();
+                // take CPU lock to prevent CPU from going off even if the user
+                // presses the power button during download
+                PowerManager pm = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
+                mWakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,
+                        getClass().getName());
+                mWakeLock.acquire();
+                progressDialog.show();
+            }
+
+            @Override
+            protected void onProgressUpdate(Integer... progress) {
+                super.onProgressUpdate(progress);
+                // if we get here, length is known, now set indeterminate to false
+                progressDialog.setIndeterminate(false);
+                progressDialog.setMax(100);
+                progressDialog.setProgress(progress[0]);
+            }
+
+            @Override
+            protected void onPostExecute(Book result) {
+                Log.d(TAG, "doing postExecute");
+
+                mWakeLock.release();
+                progressDialog.dismiss();
+
+                Toast toast = new Toast(getApplicationContext());
+                if (result == null) {
+                    // null because AsyncTask hasn't done its task
+                    //Log.v("download error", result.get_title());
+                    toast.makeText(context,"Download error", Toast.LENGTH_LONG).show();
+
+                } else {
+                    Log.v("File downloaded", "null");
+                    outputTextView.setText(result.toString());
+                    toast.makeText(context,"File downloaded", Toast.LENGTH_SHORT).show();
+                }
+                //outputTextView.setText("Done downloading " + result.get_title() + " ");
+            }
+
+
+        }
+
         private void setTextViewAdapter(View view) {
-            resultTextView = (TextView) view.findViewById(R.id.result_text);
+            outputTextView = (TextView) view.findViewById(R.id.result_text);
         }
 
         @Override
         public View onCreateView(LayoutInflater inflater, ViewGroup container,
                                  Bundle savedInstanceState) {
-            Log.d(TAG, "Creating mashup view");
+            Log.d(TAG, "Creating mashup fragment");
             View rootView = inflater.inflate(R.layout.fragment_mashup, container, false);
 
             setTextViewAdapter(rootView);
@@ -448,67 +438,12 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
         }
     }
 
-    /**
-     * A placeholder fragment containing a simple view.
-     */
-    public static class PlaceholderFragment extends Fragment {
-        /**
-         * The fragment argument representing the section number for this
-         * fragment.
-         */
-        private static final String ARG_SECTION_NUMBER = "section_number";
-
-        /**
-         * Returns a new instance of this fragment for the given section
-         * number.
-         */
-        public static PlaceholderFragment newInstance(int sectionNumber) {
-            PlaceholderFragment fragment = new PlaceholderFragment();
-            Bundle args = new Bundle();
-            args.putInt(ARG_SECTION_NUMBER, sectionNumber);
-            fragment.setArguments(args);
-            return fragment;
-        }
-
-        public PlaceholderFragment() {
-        }
-
-        @Override
-        public View onCreateView(LayoutInflater inflater, ViewGroup container,
-                Bundle savedInstanceState) {
-            View rootView = inflater.inflate(R.layout.fragment_main, container, false);
-            TextView textView = (TextView) rootView.findViewById(R.id.section_label);
-            textView.setText(Integer.toString(getArguments().getInt(ARG_SECTION_NUMBER)));
-            return rootView;
-        }
+    private static void populateDesktopHttpHeaders(URLConnection urlCon) {
+        // add custom header in order to be easily detected
+        urlCon.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:25.0) Gecko/20100101 Firefox/25.0");
+        urlCon.setRequestProperty("Accept-Language",
+                "el-gr,el;q=0.8,en-us;q=0.5,en;q=0.3");
+        urlCon.setRequestProperty("Accept-Charset",
+                "ISO-8859-7,utf-8;q=0.7,*;q=0.7");
     }
-
-    // convert InputStream to String
-    private static String getStringFromInputStream(InputStream is) {
-
-        BufferedReader br = null;
-        StringBuilder sb = new StringBuilder();
-
-        String line;
-        try {
-            br = new BufferedReader(new InputStreamReader(is));
-            while ((line = br.readLine()) != null) {
-                Log.d(TAG, line);
-                sb.append(line);
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        } finally {
-            if (br != null) {
-                try {
-                    Log.d(TAG, "closing buffered reader");
-                    br.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-        }
-        return sb.toString();
-    }
-
 }

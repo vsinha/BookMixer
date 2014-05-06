@@ -41,8 +41,9 @@ public class DatabaseAdapter {
                 KEY_TITLE, KEY_AUTHOR, KEY_URL, KEY_DOWNLOADED, KEY_TEXT  },
                 KEY_ID + "=?",
                 new String[] { String.valueOf(id) }, null, null, null, null);
-        if (cursor != null)
+        if (cursor != null) {
             cursor.moveToFirst();
+        }
 
         Book book = new Book(Integer.parseInt(cursor.getString(0)), // id
                 cursor.getString(1), //title
@@ -88,8 +89,7 @@ public class DatabaseAdapter {
         return this;
     }
 
-    public DatabaseAdapter open() throws SQLException
-    {
+    public DatabaseAdapter open() throws SQLException {
         try {
             dbHandler.openDataBase();
             dbHandler.close();

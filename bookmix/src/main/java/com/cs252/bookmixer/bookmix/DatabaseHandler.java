@@ -120,6 +120,7 @@ public class DatabaseHandler extends SQLiteOpenHelper {
         return mDataBase != null;
     }
 
+    // TODO update book in db with text post-download
     public void addBook(Book book) {
         Log.v(TAG, "adding books");
         SQLiteDatabase db = this.getWritableDatabase();
