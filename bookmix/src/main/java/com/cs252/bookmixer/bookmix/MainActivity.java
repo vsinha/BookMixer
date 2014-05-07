@@ -33,6 +33,8 @@ import android.support.v4.app.FragmentTransaction;
 import android.support.v4.app.FragmentPagerAdapter;
 import android.os.Bundle;
 import android.support.v4.view.ViewPager;
+import android.text.Layout;
+import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
 import android.util.SparseBooleanArray;
 import android.view.LayoutInflater;
@@ -280,8 +282,6 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
         public BookAdapter(Context context, int textViewResourceId, List<Book> books) {
             super(context, textViewResourceId, books);
             this.books = books;
-
-            System.out.println(books);
             this.context = context;
 
             //initialize to all zeros
@@ -329,6 +329,7 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
                 holder.checkBox = (CheckBox) convertView.findViewById( R.id.checkbox );
                 holder.title = (TextView) convertView.findViewById(R.id.title_text);
                 holder.author = (TextView) convertView.findViewById(R.id.author_text);
+                holder.cellView = convertView.findViewById(R.layout.listcell);
 
                 holder.checkBox.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
                     @Override
@@ -342,6 +343,8 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
                 convertView.setTag(R.id.title_text, holder.title);
                 convertView.setTag(R.id.author_text, holder.author);
                 convertView.setTag(R.id.checkbox, holder.checkBox);
+                convertView.setTag(R.layout.listcell, holder.cellView);
+
             } else { // recycle an old one
                 holder = (ViewHolder) convertView.getTag();
             }
@@ -353,6 +356,12 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
             holder.title.setText(b.get_title());
             holder.author.setText(b.get_author());
             holder.checkBox.setChecked( checkedItems.get( position ) );
+
+            /*
+            if (b.is_downloaded()) {
+                holder.cellView.setBackgroundColor(getResources().getColor(R.color.lightgreen));
+            }
+            */
 
             return convertView;
         }
@@ -377,6 +386,7 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
         TextView title;
         TextView author;
         CheckBox checkBox;
+        View cellView;
     }
 
     private class DownloadTextTask extends AsyncTask<Book, Integer, Book> {
@@ -402,6 +412,8 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
                 URL url = new URL(books[0].getURL());
                 connection = (HttpURLConnection) url.openConnection();
                 populateDesktopHttpHeaders(connection);
+                connection.connect();
+                connection.disconnect();
                 connection.connect();
 
                 // expect HTTP 200 OK, so we don't mistakenly save error report
@@ -506,16 +518,13 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
                 outputTextView.setText(result.toString());
                 toast.makeText(context,"File downloaded", Toast.LENGTH_SHORT).show();
 
-                // update the list item's color to signify we have the text
-
-                // update the database entry (add the text)
-                db.updateBook(result);
-
                 // update the view in another thread
-                final String text = result.get_text();
+                final Book finalbook = result;
                 runOnUiThread(new Runnable() {
                     public void run() {
-                        outputTextView.setText(text);
+                        // update the database entry (add the text)
+                        db.updateBook(finalbook);
+                        outputTextView.setText(finalbook.get_text());
                     }
                 });
             }
@@ -539,7 +548,7 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
                     Log.d(TAG, "Mashing up selected books");
 
                     // first, download books if necessary
-                    //new DownloadTextTask(getApplicationContext()).execute(selectedItems).get();
+                    //new DownloadTextTask(getApplicationContext()).execute(selectedItems);
                     for (Book book : selectedItems) {
                         Log.d(TAG, "Selected: " + book.toString()
                                 + " isDownloaded? " + book.is_downloaded());
@@ -549,16 +558,16 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
 
                             Context context = getApplicationContext();
                             // multi-thread if possible
-                            //if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
-                            //    new DownloadTextTask(context)
-                            //            .executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, book);
-                            //} else {
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
+                                new DownloadTextTask(context)
+                                        .executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, book);
+                            } else {
                                 try {
                                     new DownloadTextTask(context).execute(book).get();
                                 } catch (Exception e) {
                                     e.printStackTrace();
                                 }
-                            //}
+                            }
                         }
                     }
                 }
@@ -567,6 +576,7 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
 
         private void setTextViewAdapter(View view) {
             outputTextView = (TextView) view.findViewById(R.id.result_text);
+            //outputTextView.setMovementMethod(new ScrollingMovementMethod());
         }
 
         @Override

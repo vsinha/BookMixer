@@ -12,13 +12,20 @@
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true" />
 
+    <ScrollView
+        android:id="@+id/scroller"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:scrollbars = "vertical">
     <TextView
         android:id="@+id/result_text"
         android:text="@string/generatebutton"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_above="@id/generate_button"
-        android:padding="10dp"
-        android:layout_alignParentTop="true"/>
+        android:layout_height="wrap_content"
+        android:paddingTop="10dp"
+        android:paddingLeft="10dp"
+        android:paddingRight="10dp"
+        />
+    </ScrollView>
 
 </RelativeLayout>

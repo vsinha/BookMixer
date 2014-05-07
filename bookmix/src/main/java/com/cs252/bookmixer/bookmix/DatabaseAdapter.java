@@ -116,7 +116,7 @@ public class DatabaseAdapter {
             values.put(KEY_TEXT, book.get_text());
         }
 
-        db.update(TABLE_BOOKS, values, "_id " + "=" + book.get_id(), null);
+        db.update(TABLE_BOOKS, values, "KEY_ID " + "=" + book.get_id(), null);
 
         Log.d(TAG, "finished updating book: " + book.get_title());
         db.close();
