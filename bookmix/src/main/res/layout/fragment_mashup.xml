@@ -12,12 +12,12 @@
         <TextView
             android:id="@+id/result_text"
             android:text="@string/generatebutton"
-            android:textSize="14dp"
+            android:textSize="15dp"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:paddingTop="10dp"
-            android:paddingLeft="10dp"
-            android:paddingRight="10dp"
+            android:paddingTop="15dp"
+            android:paddingLeft="15dp"
+            android:paddingRight="15dp"
             android:layout_gravity="left|top" />
     </ScrollView>
 

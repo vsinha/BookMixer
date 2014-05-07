@@ -447,10 +447,10 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
             super.onProgressUpdate(progress);
             // if we get here, length is known, now set indeterminate to false
             if (!progressDialog.isShowing()) {
-                progressDialog.setMessage("Downloading " + originalBook.get_title());
                 Log.d(TAG, "taking control of progress");
                 inChargeOfProgress = true;
                 progressDialog.show();
+                progressDialog.setMessage("Downloading " + originalBook.get_title());
             }
 
             if (inChargeOfProgress) {
@@ -534,6 +534,8 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
                                 }
                             }
                         } else { // book is downloaded
+                            Toast.makeText(getApplicationContext(),"Generating Markov Chains",
+                                    Toast.LENGTH_LONG).show();
                             markovGen.addDatum(book.get_text());
                         }
                     }
