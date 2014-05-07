@@ -458,7 +458,16 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
                 Log.d(TAG, "writing to output string");
                 downloadedText = sb.toString();
                 bookWithText = books[0];
-                bookWithText.set_text(downloadedText);
+                int startPos=downloadedText.indexOf("START OF THIS PROJECT GUTENBERG");
+                if (startPos==-1) startPos=downloadedText.indexOf("START OF THE PROJECT GUTENBERG");
+                int endPos = downloadedText.indexOf("END OF THIS PROJECT GUTENBERG");
+                if (endPos==-1) endPos=downloadedText.indexOf("START OF THE PROJECT GUTENBERG");
+                if(startPos!=-1 && endPos!=-1){
+                    bookWithText.set_text(downloadedText.substring(startPos,endPos));
+                } else{
+                    System.out.println("Warning! Failed to trim. Start: "+startPos+" End: "+endPos);
+                    bookWithText.set_text(downloadedText);
+                }
 
             } catch (Exception e) {
                 e.printStackTrace();
