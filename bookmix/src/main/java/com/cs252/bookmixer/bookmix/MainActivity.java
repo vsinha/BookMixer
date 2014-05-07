@@ -408,15 +408,15 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
             String downloadedText;
             Book bookWithText;
 
-            progressDialog.setMessage("Downloading " + books[0].get_title());
+            //progressDialog.setMessage("Downloading " + books[0].get_title());
             try {
                 Log.d(TAG, "attempting dl from url: " + books[0].getURL());
                 URL url = new URL(books[0].getURL());
                 connection = (HttpURLConnection) url.openConnection();
                 populateDesktopHttpHeaders(connection);
                 connection.connect();
-                connection.disconnect();
-                connection.connect();
+                //connection.disconnect();
+                //connection.connect();
 
                 // expect HTTP 200 OK, so we don't mistakenly save error report
                 // instead of the file
@@ -475,6 +475,10 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
                     connection.disconnect();
                 }
             }
+
+            Log.d(TAG, "updating DB with new book");
+            db.updateBook(bookWithText);
+
             Log.d(TAG, "returning from downloader");
             return bookWithText;
         }
@@ -485,15 +489,16 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
 
             // take CPU lock to prevent CPU from going off even if the user
             // presses the power button during download
-            PowerManager pm = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
-            mWakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,
-                    getClass().getName());
-            mWakeLock.acquire();
+            //PowerManager pm = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
+            //mWakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,
+            //        getClass().getName());
+            //mWakeLock.acquire();
 
-            Log.d(TAG, "Showing progress bar");
-            progressDialog.show();
+            //Log.d(TAG, "Showing progress bar");
+            //progressDialog.show();
         }
 
+        /*
         @Override
         protected void onProgressUpdate(Integer... progress) {
             super.onProgressUpdate(progress);
@@ -502,13 +507,14 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
             progressDialog.setMax(100);
             progressDialog.setProgress(progress[0]);
         }
+        */
 
         @Override
         protected void onPostExecute(Book result) {
             Log.d(TAG, "doing postExecute");
 
-            mWakeLock.release();
-            progressDialog.dismiss();
+            //mWakeLock.release();
+            //progressDialog.dismiss();
 
             Toast toast = new Toast(getApplicationContext());
             if (result == null) {
@@ -525,7 +531,7 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
                 runOnUiThread(new Runnable() {
                     public void run() {
                         // update the database entry (add the text)
-                        db.updateBook(finalbook);
+                        Log.d(TAG, "updating textview");
                         outputTextView.setText(finalbook.get_text());
                     }
                 });
@@ -561,6 +567,7 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
                             Context context = getApplicationContext();
                             // multi-thread if possible
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
+                                Log.d(TAG, "such multithreading wow");
                                 new DownloadTextTask(context)
                                         .executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, book);
                             } else {
