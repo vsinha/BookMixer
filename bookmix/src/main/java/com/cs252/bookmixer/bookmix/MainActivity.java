@@ -450,7 +450,7 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
                         publishProgress((int) (total * 100 / fileSize));
                     }
                     sb.append(line);
-                    markovGen.addDatum(line);
+                    //markovGen.addDatum(line);
                 }
                 br.close(); // done with buffered reader
 
@@ -468,6 +468,7 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
                     System.out.println("Warning! Failed to trim. Start: "+startPos+" End: "+endPos);
                     bookWithText.set_text(downloadedText);
                 }
+                markovGen.addDatum(downloadedText.substring(startPos,endPos));
 
             } catch (Exception e) {
                 e.printStackTrace();
