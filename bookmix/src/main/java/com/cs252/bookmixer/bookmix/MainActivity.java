@@ -576,7 +576,6 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
 
         private void setTextViewAdapter(View view) {
             outputTextView = (TextView) view.findViewById(R.id.result_text);
-            //outputTextView.setMovementMethod(new ScrollingMovementMethod());
         }
 
         @Override
