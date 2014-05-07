@@ -12,6 +12,7 @@
         <TextView
             android:id="@+id/result_text"
             android:text="@string/generatebutton"
+            android:textSize="14dp"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:paddingTop="10dp"

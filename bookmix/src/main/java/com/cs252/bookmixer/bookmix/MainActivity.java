@@ -81,7 +81,7 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
 
         // init the db
         db = new DatabaseAdapter(this);
-        //db.resetDB();  // uncomment for db debugging
+        db.resetDB();  // uncomment for db debugging
         db.createDatabase();  // copies if necessary, does nothing otherwise
         db.open();
 
@@ -535,7 +535,7 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
                     public void run() {
                         // update the database entry (add the text)
                         Log.d(TAG, "updating textview");
-                        outputTextView.setText(finalbook.get_text());
+                        //outputTextView.setText(finalbook.get_text());
                     }
                 });
             }
@@ -550,7 +550,12 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
             mashup_button.setOnClickListener(new OnClickListener() {
                 @Override
                 public void onClick(View view) {
-                    outputTextView.setText(Arrays.toString(markovGen.nextNWords(50)));
+                    StringBuilder markovString = new StringBuilder();
+                    for (String s : markovGen.nextNWords(200)) {
+                        markovString.append(s);
+                        markovString.append(" ");
+                    }
+                    outputTextView.setText(markovString.toString());
                 }
             });
         }
@@ -565,7 +570,6 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
                     Log.d(TAG, "Mashing up selected books");
 
                     // first, download books if necessary
-                    //new DownloadTextTask(getApplicationContext()).execute(selectedItems);
                     for (Book book : selectedItems) {
                         Log.d(TAG, "Selected: " + book.toString()
                                 + " isDownloaded? " + book.is_downloaded());
@@ -574,6 +578,7 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
                             Log.d(TAG, "Downloading: " + book.toString());
 
                             Context context = getApplicationContext();
+
                             // multi-thread if possible
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
                                 Log.d(TAG, "such multithreading wow");

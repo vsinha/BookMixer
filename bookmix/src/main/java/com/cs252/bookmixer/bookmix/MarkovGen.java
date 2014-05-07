@@ -66,7 +66,7 @@ public class MarkovGen{
     }
 
     public void printDict(){
-        System.out.println(dict.entrySet());
+        //System.out.println(dict.entrySet());
     }
 
 
@@ -79,11 +79,11 @@ public class MarkovGen{
         List<String> nextWordList = dict.get(Arrays.asList(new String[]{word1,word2}));
         String nextWord;
         if(nextWordList==null){
-            System.out.println("Dictionary does not contain key for ("+word1+", "+word2+"). Substituting a random key.");
+            //System.out.println("Dictionary does not contain key for ("+word1+", "+word2+"). Substituting a random key.");
             List<List<String>> keysAsArray = new ArrayList<List<String>>(dict.keySet());
 
             List<String> randomKey=keysAsArray.get(rand.nextInt(keysAsArray.size()));
-            System.out.println("Random key: "+randomKey);
+            //System.out.println("Random key: "+randomKey);
             word1=randomKey.get(0);
             word2=randomKey.get(1);
             nextWordList = dict.get(Arrays.asList(new String[]{word1,word2}));
