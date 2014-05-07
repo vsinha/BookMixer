@@ -589,6 +589,8 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
                 public void onClick(View view) {
                     Log.d(TAG, "Mashing up selected books");
 
+                    markovGen = new MarkovGen();
+
                     // first, download books if necessary
                     for (Book book : selectedItems) {
                         Log.d(TAG, "Selected: " + book.toString()
