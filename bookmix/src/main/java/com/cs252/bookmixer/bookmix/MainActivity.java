@@ -162,6 +162,7 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
                 resultText.append(b.toString());
                 resultText.append("\n");
             }
+
             outputTextView.setText(resultText.toString());
         }
 
@@ -239,6 +240,7 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
 
             // convert list of books into array[]
             List<Book> list = db.getAllBooks();
+            Book[] books = list.toArray(new Book[list.size()]);
 
             // set adapter
             bookAdapter = new BookAdapter(super.getActivity(), R.layout.listcell, list);

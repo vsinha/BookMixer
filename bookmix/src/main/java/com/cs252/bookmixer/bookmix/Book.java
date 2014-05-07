@@ -50,7 +50,7 @@ public class Book {
     }
 
     public boolean is_downloaded() {
-        return !_text.equals("empty_text");
+        return !_text.equals("emptyText");
     }
 
     public void set_downloaded(boolean is_downloaded) {
