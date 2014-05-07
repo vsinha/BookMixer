@@ -449,7 +449,7 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
                     if (fileSize > 0) {// only if total length is known
                         publishProgress((int) (total * 100 / fileSize));
                     }
-                    sb.append(line);
+                    sb.append(line+" ");
                     //markovGen.addDatum(line);
                 }
                 br.close(); // done with buffered reader
@@ -561,7 +561,7 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
                 @Override
                 public void onClick(View view) {
                     StringBuilder markovString = new StringBuilder();
-                    for (String s : markovGen.nextNWords(200)) {
+                    for (String s : markovGen.nextNSentences(10)) {
                         markovString.append(s);
                         markovString.append(" ");
                     }

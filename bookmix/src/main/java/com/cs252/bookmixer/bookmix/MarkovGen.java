@@ -12,6 +12,7 @@ import java.util.Scanner;
 public class MarkovGen{
     public static final int PREDICTOR_LENGTH=2;
     HashMap<List<String>, List<String>> dict;
+    List<List<String>> startingKeys = new ArrayList<List<String>>(); //keys that started a datum
     private String word1, word2;
     Random rand = new Random();
 
@@ -45,6 +46,19 @@ public class MarkovGen{
 
     public void addDatum( String rawStringInput ){
         List<String> splitInput = new ArrayList<String>(Arrays.asList(rawStringInput.split(" ")));
+        ArrayList<String> newStartingKey=new ArrayList<String>();
+        newStartingKey.add(splitInput.get(0));
+        newStartingKey.add(splitInput.get(1));
+        startingKeys.add(newStartingKey);
+        for(int n=0;n<splitInput.size()-2;n++){
+            if(splitInput.get(n).indexOf('.')!=-1){ //if the current word has a period, add the next two as a starting key
+                newStartingKey=new ArrayList<String>();
+                newStartingKey.add(splitInput.get(n+1));
+                newStartingKey.add(splitInput.get(n+2));
+                startingKeys.add(newStartingKey);
+            }
+        }
+
         for(int a=0; a<splitInput.size()-PREDICTOR_LENGTH; a++){
             List<String> l = dict.get(splitInput.subList(a, a+PREDICTOR_LENGTH));
             if(l==null){
@@ -99,12 +113,39 @@ public class MarkovGen{
             return nextWord;
         }
     }
+    public void setRandomStartingSeed(){
+        //System.out.println(startingKeys.size());
+        List<String> randomSeed=startingKeys.get(rand.nextInt(startingKeys.size()));
+        word1=randomSeed.get(0);
+        word2=randomSeed.get(1);
 
+    }
     public String[] nextNWords(int n){
         String[] returnWords = new String[n];
         for(int a=0; a<n; a++){
             returnWords[a]=this.nextWord();
         }
         return returnWords;
+    }
+    public String nextSentence(){
+        StringBuilder returnString = new StringBuilder();
+        String nextWord = "";
+        setRandomStartingSeed();  //not needed if making a non-starting sentence
+        returnString.append(' '+word1+' '+word2);//append the current start of the sentence
+
+        while(nextWord.indexOf('.')==-1 && nextWord.indexOf('!')==-1 && nextWord.indexOf('?')==-1){
+            returnString.append(nextWord+' ');
+            nextWord=this.nextWord();
+        }
+        returnString.append(nextWord);
+        return returnString.toString();
+    }
+
+    public String[] nextNSentences(int n){
+        String[] returnSentences = new String[n];
+        for(int a=0; a<n; a++){
+            returnSentences[a]=this.nextSentence();
+        }
+        return returnSentences;
     }
 }
