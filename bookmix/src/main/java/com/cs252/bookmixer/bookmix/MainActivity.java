@@ -11,6 +11,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
@@ -69,6 +70,7 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
     TextView outputTextView;
     Button generateButton;
     ProgressDialog progressDialog;
+    MarkovGen markovGen;
 
     private static final String TAG = "MainActivity"; // for debugging
 
@@ -448,6 +450,7 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
                         publishProgress((int) (total * 100 / fileSize));
                     }
                     sb.append(line);
+                    markovGen.addDatum(line);
                 }
                 br.close(); // done with buffered reader
 
@@ -542,8 +545,14 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
     // fragment for generating the mashups
     public class MashupFragment extends Fragment {
 
-        private void mashUpBooks(View view) {
-            // TODO mash them up after all books are done downloading
+        private void setMashupButtonHanlder(View view) {
+            Button mashup_button = (Button) view.findViewById(R.id.mashup_button);
+            mashup_button.setOnClickListener(new OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    outputTextView.setText(Arrays.toString(markovGen.nextNWords(50)));
+                }
+            });
         }
 
         // handler for the generate button
@@ -577,6 +586,8 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
                                     e.printStackTrace();
                                 }
                             }
+                        } else { // book is downloaded
+                            markovGen.addDatum(book.get_text());
                         }
                     }
                 }
@@ -593,8 +604,11 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
             Log.d(TAG, "Creating mashup fragment");
             View rootView = inflater.inflate(R.layout.fragment_mashup, container, false);
 
+            markovGen = new MarkovGen();
+
             setTextViewAdapter(rootView);
             setGenerateButtonHandler(rootView);
+            setMashupButtonHanlder(rootView);
 
             return rootView;
         }

@@ -1,31 +1,43 @@
 <?xml version="1.0" encoding="utf-8"?>
 
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent" >
+
+    <ScrollView
+        android:id="@+id/scroller"
+        android:layout_width="match_parent"
+        android:layout_height="473dp"
+        android:scrollbars = "vertical">
+        <TextView
+            android:id="@+id/result_text"
+            android:text="@string/generatebutton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingTop="10dp"
+            android:paddingLeft="10dp"
+            android:paddingRight="10dp"
+            android:layout_gravity="left|top" />
+    </ScrollView>
+
+    <Button
+        android:id="@+id/mashup_button"
+        android:text="Mashup"
+        android:gravity="center"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentRight="true"
+        android:layout_gravity="right|bottom" />
 
     <Button
         android:id="@+id/generate_button"
         android:text="@string/generatebutton"
         android:gravity="center"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_alignParentBottom="true" />
-
-    <ScrollView
-        android:id="@+id/scroller"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:scrollbars = "vertical">
-    <TextView
-        android:id="@+id/result_text"
-        android:text="@string/generatebutton"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:paddingTop="10dp"
-        android:paddingLeft="10dp"
-        android:paddingRight="10dp"
-        />
-    </ScrollView>
+        android:layout_alignParentBottom="true"
+        android:layout_toLeftOf="@id/mashup_button"
+        android:layout_gravity="left|bottom" />
 
-</RelativeLayout>
+</FrameLayout>
