@@ -1,28 +1,17 @@
 package com.cs252.bookmixer.bookmix;
 
 import java.io.BufferedReader;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.lang.reflect.Array;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.Locale;
-import java.util.concurrent.ExecutionException;
-
-import android.annotation.TargetApi;
-import android.app.Activity;
 import android.app.ProgressDialog;
 import android.content.Context;
-import android.content.DialogInterface;
-import android.graphics.Color;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.PowerManager;
@@ -34,25 +23,18 @@ import android.support.v4.app.FragmentTransaction;
 import android.support.v4.app.FragmentPagerAdapter;
 import android.os.Bundle;
 import android.support.v4.view.ViewPager;
-import android.text.Layout;
-import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
-import android.util.SparseBooleanArray;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View.OnClickListener;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.AdapterView;
-import android.widget.AdapterView.OnItemClickListener;
 import android.widget.ArrayAdapter;
-import android.widget.BaseAdapter;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.ListView;
-import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -63,7 +45,6 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
 
     DatabaseAdapter db;
 
-    //ArrayAdapter<Book> bookAdapter;
     BookAdapter bookAdapter;
     ArrayList<Book> selectedItems;
     ListView listView;
@@ -145,6 +126,16 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
         int id = item.getItemId();
         if (id == R.id.action_settings) {
             return true;
+        } else if (id == R.id.action_dbreset) {
+            Toast.makeText(getApplicationContext(),
+                    "Resetting the database...", Toast.LENGTH_LONG).show();
+            db.close();
+            db.resetDB();
+            db.createDatabase();  // copies if necessary, does nothing otherwise
+            db.open();
+            Toast.makeText(getApplicationContext(),
+                    "Finished.", Toast.LENGTH_LONG).show();
+            return true;
         }
         return super.onOptionsItemSelected(item);
     }
@@ -175,21 +166,13 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
     @Override
     public void onTabUnselected(ActionBar.Tab tab, FragmentTransaction fragmentTransaction) {
         Log.d(TAG, "unselected: " + tab.getText());
-
-        // (sloppily) match text to check what tab we're on
-        if (tab.getText().equals(getString(R.string.title_section1))) {
-
-        }
     }
 
     @Override
     public void onTabReselected(ActionBar.Tab tab, FragmentTransaction fragmentTransaction) {
     }
 
-    /**
-     * A {@link FragmentPagerAdapter} that returns a fragment corresponding to
-     * one of the sections/tabs/pages.
-     */
+
     public class SectionsPagerAdapter extends FragmentPagerAdapter {
 
         public SectionsPagerAdapter(FragmentManager fm) {
@@ -242,38 +225,11 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
 
             // convert list of books into array[]
             List<Book> list = db.getAllBooks();
-            Book[] books = list.toArray(new Book[list.size()]);
 
             // set adapter
             bookAdapter = new BookAdapter(super.getActivity(), R.layout.listcell, list);
             listView.setChoiceMode(ListView.CHOICE_MODE_MULTIPLE); // able to select multiples
             listView.setAdapter(bookAdapter);
-
-            /*
-            listView.setOnItemClickListener(new OnItemClickListener() {
-
-                public void onItemClick(AdapterView<?> parent, View view,int position, long id) {
-                    SparseBooleanArray checked = listView.getCheckedItemPositions();
-
-
-                    if (listView.isItemChecked(position)) {
-                        Log.d(TAG, "Unselected: " + bookAdapter.getItem(position));
-                        view.setSelected(false);
-                        selectedItems.remove(bookAdapter.getItem(position));
-                        listView.setItemChecked(position, false);
-                    } else {
-                        Log.d(TAG, "Selected: " + bookAdapter.getItem(position));
-                        view.setSelected(true);
-                        selectedItems.add(bookAdapter.getItem(position));
-                        listView.setItemChecked(position, true);
-                    }
-                    bookAdapter.notifyDataSetChanged();
-
-                    // do the dl
-                    // bookAdapter.rowSelected(view, position);
-                }
-            });
-            */
         }
     }
 
@@ -302,27 +258,9 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
             return selectedItems;
         }
 
-        /*
-        public void rowSelected(View v, int position) {
-            // if row is selected, proceed to download the book
-            Book b = getItem(position);
-            if (!b.is_downloaded()) {
-                Toast.makeText(context, "Downloading " + b.get_title(), Toast.LENGTH_LONG).show();
-                new DownloadTextTask(context).execute(b);
-            }
-
-            // select what we've downloaded
-            CheckBox cb = (CheckBox) v.findViewById(R.id.checkbox);
-            cb.toggle();
-
-            // update
-            this.notifyDataSetChanged();
-        }
-        */
-
         @Override
         public View getView(final int position, View convertView, ViewGroup parent) {
-            ViewHolder holder = null;
+            ViewHolder holder;
 
             if (convertView == null) { // create a new one
                 LayoutInflater inflater = (LayoutInflater) getContext()
@@ -361,12 +299,6 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
             holder.author.setText(b.get_author());
             holder.checkBox.setChecked( checkedItems.get( position ) );
 
-            /*
-            if (b.is_downloaded()) {
-                holder.cellView.setBackgroundColor(getResources().getColor(R.color.lightgreen));
-            }
-            */
-
             return convertView;
         }
 
@@ -395,7 +327,7 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
 
     private class DownloadTextTask extends AsyncTask<Book, Integer, Book> {
         static final String TAG = "DownloadTextTask: ";
-        Toast toast = new Toast(getApplicationContext());
+        //Toast toast = new Toast(getApplicationContext());
         boolean inChargeOfProgress = false;
 
         Book originalBook;
@@ -416,15 +348,12 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
             String downloadedText;
             Book bookWithText;
 
-            //progressDialog.setMessage("Downloading " + books[0].get_title());
             try {
                 Log.d(TAG, "attempting dl from url: " + books[0].getURL());
                 URL url = new URL(books[0].getURL());
                 connection = (HttpURLConnection) url.openConnection();
                 populateDesktopHttpHeaders(connection);
                 connection.connect();
-                //connection.disconnect();
-                //connection.connect();
 
                 // expect HTTP 200 OK, so we don't mistakenly save error report
                 // instead of the file
@@ -441,7 +370,6 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
                 String line;
                 long total = 0;
                 long fileSize = books[0].getFilesize();
-                int count;
                 System.out.print("writing to buffered reader");
 
                 while (true) {
@@ -456,7 +384,6 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
                         publishProgress((int) (total * 100 / fileSize));
                     }
                     sb.append(line+" ");
-                    //markovGen.addDatum(line);
                 }
                 br.close(); // done with buffered reader
 
@@ -505,17 +432,10 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
         @Override
         protected void onPreExecute() {
             super.onPreExecute();
-            toast.makeText(context,"Downloading", Toast.LENGTH_LONG).show();
-
-            // take CPU lock to prevent CPU from going off even if the user
-            // presses the power button during download
-            //PowerManager pm = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
-            //mWakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,
-            //        getClass().getName());
-            //mWakeLock.acquire();
+            Toast.makeText(context,"Downloading", Toast.LENGTH_LONG).show();
 
             //Log.d(TAG, "Showing progress bar");
-            if (progressDialog.isShowing() == false) {
+            if (!progressDialog.isShowing()) {
                 inChargeOfProgress = true;
                 progressDialog.show();
                 progressDialog.setMessage("Downloading");
@@ -526,13 +446,13 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
         protected void onProgressUpdate(Integer... progress) {
             super.onProgressUpdate(progress);
             // if we get here, length is known, now set indeterminate to false
-            if (progressDialog.isShowing() == false) {
+            if (!progressDialog.isShowing()) {
                 progressDialog.setMessage("Downloading " + originalBook.get_title());
                 Log.d(TAG, "taking control of progress");
                 inChargeOfProgress = true;
                 progressDialog.show();
             }
-            //progressDialog.setMessage("Downloading " + originalBook.get_title());
+
             if (inChargeOfProgress) {
                 progressDialog.setIndeterminate(false);
                 progressDialog.setMax(100);
@@ -552,12 +472,12 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
 
             if (result == null) {
                 // null because AsyncTask hasn't done its task
-                toast.makeText(context,"Download error", Toast.LENGTH_LONG).show();
+                Toast.makeText(context,"Download error", Toast.LENGTH_LONG).show();
 
             } else {
                 Log.v(TAG, "File downloaded");
                 outputTextView.setText(result.toString());
-                toast.makeText(context,"File downloaded", Toast.LENGTH_SHORT).show();
+                Toast.makeText(context,"File downloaded", Toast.LENGTH_SHORT).show();
             }
         }
     }
