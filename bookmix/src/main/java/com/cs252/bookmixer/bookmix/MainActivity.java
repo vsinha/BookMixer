@@ -371,6 +371,7 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
 
     private class DownloadTextTask extends AsyncTask<Book, Integer, Book> {
         static final String TAG = "DownloadTextTask: ";
+        Toast toast = new Toast(getApplicationContext());
 
         private Context context;
         private PowerManager.WakeLock mWakeLock;
@@ -385,6 +386,7 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
             HttpURLConnection connection = null;
             String downloadedText;
             Book bookWithText;
+
 
             //progressDialog.setMessage("Downloading " + books[0].get_title());
             try {
@@ -476,6 +478,7 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
         protected void onPreExecute() {
             super.onPreExecute();
 
+            toast.makeText(context,"Downloading", Toast.LENGTH_LONG).show();
             // take CPU lock to prevent CPU from going off even if the user
             // presses the power button during download
             //PowerManager pm = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
@@ -505,7 +508,7 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
             //mWakeLock.release();
             //progressDialog.dismiss();
 
-            Toast toast = new Toast(getApplicationContext());
+
             if (result == null) {
                 // null because AsyncTask hasn't done its task
                 toast.makeText(context,"Download error", Toast.LENGTH_LONG).show();
