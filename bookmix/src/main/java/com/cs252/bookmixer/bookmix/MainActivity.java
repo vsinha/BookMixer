@@ -396,6 +396,9 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
     private class DownloadTextTask extends AsyncTask<Book, Integer, Book> {
         static final String TAG = "DownloadTextTask: ";
         Toast toast = new Toast(getApplicationContext());
+        boolean inChargeOfProgress = false;
+
+        Book originalBook;
 
         private Context context;
         private PowerManager.WakeLock mWakeLock;
@@ -406,6 +409,8 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
 
         @Override
         protected Book doInBackground(Book ... books) {
+            originalBook = books[0];
+
             InputStream input = null;
             HttpURLConnection connection = null;
             String downloadedText;
@@ -510,27 +515,40 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
             //mWakeLock.acquire();
 
             //Log.d(TAG, "Showing progress bar");
-            //progressDialog.show();
+            if (progressDialog.isShowing() == false) {
+                inChargeOfProgress = true;
+                progressDialog.show();
+                progressDialog.setMessage("Downloading");
+            }
         }
 
-        /*
         @Override
         protected void onProgressUpdate(Integer... progress) {
             super.onProgressUpdate(progress);
             // if we get here, length is known, now set indeterminate to false
-            progressDialog.setIndeterminate(false);
-            progressDialog.setMax(100);
-            progressDialog.setProgress(progress[0]);
+            if (progressDialog.isShowing() == false) {
+                progressDialog.setMessage("Downloading " + originalBook.get_title());
+                Log.d(TAG, "taking control of progress");
+                inChargeOfProgress = true;
+                progressDialog.show();
+            }
+            //progressDialog.setMessage("Downloading " + originalBook.get_title());
+            if (inChargeOfProgress) {
+                progressDialog.setIndeterminate(false);
+                progressDialog.setMax(100);
+                progressDialog.setProgress(progress[0]);
+            }
         }
-        */
 
         @Override
         protected void onPostExecute(Book result) {
             Log.d(TAG, "doing postExecute");
 
             //mWakeLock.release();
-            //progressDialog.dismiss();
-
+            if (inChargeOfProgress) {
+                progressDialog.dismiss();
+                inChargeOfProgress = false;
+            }
 
             if (result == null) {
                 // null because AsyncTask hasn't done its task
@@ -540,16 +558,6 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
                 Log.v(TAG, "File downloaded");
                 outputTextView.setText(result.toString());
                 toast.makeText(context,"File downloaded", Toast.LENGTH_SHORT).show();
-
-                // update the view in another thread
-                final Book finalbook = result;
-                runOnUiThread(new Runnable() {
-                    public void run() {
-                        // update the database entry (add the text)
-                        Log.d(TAG, "updating textview");
-                        //outputTextView.setText(finalbook.get_text());
-                    }
-                });
             }
         }
     }
